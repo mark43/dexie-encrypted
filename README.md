@@ -10,13 +10,13 @@ _Note: dexie-encrypted creates a database table to hold its configuration so you
 
 ```javascript
 import Dexie from 'dexie';
-import encrypt, { cryptoOptions } from 'dexie-encrypted';
+import encrypt from 'dexie-encrypted';
 
 const db = new Dexie('MyDatabase');
 
 // set the key and provide a configuration of how to encrypt at a table level.
 encrypt(db, symmetricKey, {
-    friends: cryptoOptions.NON_INDEXED_FIELDS,
+    friends: encrypt.NON_INDEXED_FIELDS,
 });
 
 // If this is the first time you've encrypted bump the version number.
@@ -52,19 +52,19 @@ encrypt(db, key, config);
 
 Dexie-encrypted can be configured to encrypt all the data of a table, to whitelist fields that are non-sensitive, or to blacklist sensitive fields.
 
--   `cryptoOptions.NON_INDEXED_FIELDS` - all data other than indices will be encrypted.
--   `cryptoOptions.WHITELIST` - all data other than indices and whitelisted fields will be encrypted.
--   `cryptoOptions.BLACKLIST` - listed fields will be encrypted.
+-   `encrypt.NON_INDEXED_FIELDS` - all data other than indices will be encrypted.
+-   `encrypt.WHITELIST` - all data other than indices and whitelisted fields will be encrypted.
+-   `encrypt.BLACKLIST` - listed fields will be encrypted.
 
 ```javascript
 encrypt(db, symmetricKey, {
-    users: cryptoOptions.NON_INDEXED_FIELDS,
+    users: encrypt.NON_INDEXED_FIELDS,
     friends: {
-        type: cryptoOptions.WHITELIST,
+        type: encrypt.WHITELIST,
         fields: ['street', 'picture'], // these two fields and indices will be plain text
     },
     enemies: {
-        type: cryptoOptions.BLACKLIST,
+        type: encrypt.BLACKLIST,
         fields: ['picture', 'isMortalEnemy'], // note: these cannot be indices
     },
 });

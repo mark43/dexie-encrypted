@@ -6,7 +6,7 @@ import 'dexie-export-import';
 
 import nacl from 'tweetnacl';
 
-import encrypt, { cryptoOptions } from '../index';
+import encrypt from '../index';
 
 const keyPair = nacl.sign.keyPair.fromSeed(new Uint8Array(32));
 
@@ -26,7 +26,7 @@ describe('Encrypting', () => {
 	it('should encrypt data', async (done) => {
 		const db = new Dexie('MyDatabase');
 		encrypt(db, keyPair.publicKey, {
-			friends: cryptoOptions.DATA
+			friends: encrypt.DATA
 		}, new Uint8Array(24))
 
 		// Declare tables, IDs and indexes
@@ -62,7 +62,7 @@ describe('Encrypting', () => {
 		const db = new Dexie('whitelist');
 		encrypt(db, keyPair.publicKey, {
 			friends: {
-				type: cryptoOptions.WHITELIST,
+				type: encrypt.WHITELIST,
 				fields: ['picture']
 			}
 		}, new Uint8Array(24))
@@ -99,7 +99,7 @@ describe('Encrypting', () => {
 		const db = new Dexie('blacklist');
 		encrypt(db, keyPair.publicKey, {
 			friends: {
-				type: cryptoOptions.BLACKLIST,
+				type: encrypt.BLACKLIST,
 				fields: ['street']
 			}
 		}, new Uint8Array(24))
@@ -135,7 +135,7 @@ describe('Encrypting', () => {
 	it('should decrypt', async (done) => {
 		const db = new Dexie('decrypt-test');
 		encrypt(db, keyPair.publicKey, {
-			friends: cryptoOptions.DATA
+			friends: encrypt.DATA
 		}, new Uint8Array(24))
 
 		// Declare tables, IDs and indexes
@@ -164,7 +164,7 @@ describe('Encrypting', () => {
 	it('should decrypt when the database is closed and reopened', async (done) => {
 		const db = new Dexie('decrypt-test-2');
 		encrypt(db, keyPair.publicKey, {
-			friends: cryptoOptions.DATA
+			friends: encrypt.DATA
 		}, new Uint8Array(24))
 
 		// Declare tables, IDs and indexes
@@ -185,7 +185,7 @@ describe('Encrypting', () => {
 
 		const db2 = new Dexie('decrypt-test-2');
 		encrypt(db2, keyPair.publicKey, {
-			friends: cryptoOptions.DATA
+			friends: encrypt.DATA
 		}, new Uint8Array(24))
 
 		// Declare tables, IDs and indexes
@@ -205,7 +205,7 @@ describe('Encrypting', () => {
 		const db = new Dexie('upgrade-db');
 		encrypt(db, keyPair.publicKey, {
 			friends: {
-				type: cryptoOptions.WHITELIST,
+				type: encrypt.WHITELIST,
 				fields: ['street']
 			}
 		}, new Uint8Array(24))
@@ -231,7 +231,7 @@ describe('Encrypting', () => {
 		const upgraded = new Dexie('upgrade-db');
 		encrypt(upgraded, keyPair.publicKey, {
 			friends: {
-				type: cryptoOptions.WHITELIST,
+				type: encrypt.WHITELIST,
 				fields: ['picture']
 			}
 		}, new Uint8Array(24))
@@ -251,5 +251,80 @@ describe('Encrypting', () => {
 		const data = await dbToJson(readingDb);
 		expect(data).toMatchSnapshot();
 		done();
+	});
+
+	it('should not modify your object', async (done) => {
+		const db = new Dexie('MyDatabase');
+		encrypt(db, keyPair.publicKey, {
+			friends: encrypt.DATA
+		}, new Uint8Array(24))
+
+		// Declare tables, IDs and indexes
+		db.version(1).stores({
+			friends: '++id, name, age'
+		});
+		
+		await db.open();
+
+		const original = {
+			name: 'Camilla',
+			age: 25,
+			street: 'East 13:th Street',
+			picture: 'camilla.png'
+		};
+
+		const earlyClone = {...original};
+
+		await db.friends.add(original);
+		delete original.id;
+		expect(original).toEqual(earlyClone);
+		done();
+	});
+
+	it('should have helpful error messages if you need to bump your version', async (done) => {
+		const db = new Dexie('no-crypt-check');
+		db.version(1).stores({
+			friends: '++id, name, age'
+		});
+		
+		await db.open();
+		await db.close();
+
+		const db2 = new Dexie('no-crypt-check');
+		encrypt(db2, keyPair.publicKey, {
+			friends: encrypt.DATA
+		}, new Uint8Array(24))
+
+		db2.version(1).stores({
+			friends: '++id, name, age'
+		});
+
+		expect(db2.open()).rejects.toThrow();
+		done();
+
+	});
+
+	it('should have helpful error messages if your key is not a Uint8Array', async (done) => {
+		const db = new Dexie('key-check');
+		expect(() => {
+			encrypt(db, [1,2,3], {
+				friends: encrypt.DATA
+			}, new Uint8Array(24))
+		}).toThrow('Dexie-encrypted requires a UInt8Array of length 32 for a encryption key.')
+
+		expect(() => {
+			encrypt(db, new Uint8Array(31), {
+				friends: encrypt.DATA
+			}, new Uint8Array(24))
+		}).toThrow('Dexie-encrypted requires a UInt8Array of length 32 for a encryption key.')
+
+		expect(() => {
+			encrypt(db, new Uint16Array(32), {
+				friends: encrypt.DATA
+			}, new Uint8Array(24))
+		}).toThrow('Dexie-encrypted requires a UInt8Array of length 32 for a encryption key.')
+
+		done();
+
 	});
 })

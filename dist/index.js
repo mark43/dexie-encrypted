@@ -91,6 +91,11 @@ function hideValue(input) {
 }
 
 function encrypt(db, key, cryptoSettings, nonceOverride) {
+
+    if ((key instanceof Uint8Array) === false || key.length !== 32) {
+        throw new Error('Dexie-encrypted requires a UInt8Array of length 32 for a encryption key.');
+    }
+
     db.Version.prototype._parseStoresSpec = override(
         db.Version.prototype._parseStoresSpec,
         overrideParseStoresSpec
@@ -184,7 +189,16 @@ function encrypt(db, key, cryptoSettings, nonceOverride) {
                                 return;
                             }
                             table.hook('creating', function(primKey, obj) {
+                                const preservedValue = {...obj};
                                 encryptWithRule(table, obj, newSetting);
+                                this.onsuccess = () => {
+                                    delete obj.__encryptedData;
+                                    Object.assign(obj, preservedValue);
+                                };
+                                this.onerror = () => {
+                                    delete obj.__encryptedData;
+                                    Object.assign(obj, preservedValue);
+                                };
                             });
                             table.hook('updating', function(modifications, primKey, obj) {
                                 return encryptWithRule(table, { ...obj }, newSetting);
@@ -234,6 +248,8 @@ function encrypt(db, key, cryptoSettings, nonceOverride) {
             });
     });
 }
+
+Object.assign(encrypt, cryptoOptions);
 
 exports.cryptoOptions = cryptoOptions;
 exports.default = encrypt;
