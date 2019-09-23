@@ -1,0 +1,11 @@
+{
+    "compilerOptions": {
+        "noImplicitAny": true,
+        "preserveConstEnums": true,
+        "sourceMap": true,
+        "lib": ["esnext", "dom"],
+        "target": "es2015",
+        "allowSyntheticDefaultImports": true,
+        "outDir": "./dist"
+    }
+}

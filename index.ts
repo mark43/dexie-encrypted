@@ -1,12 +1,23 @@
 import Dexie from 'dexie';
 import nacl from 'tweetnacl';
 
+// @ts-ignore
 import Typeson from 'typeson';
+// @ts-ignore
 import builtinTypes from 'typeson-registry/presets/builtin';
 
 // Import some usable helper functions
 const override = Dexie.override;
 const Promise = Dexie.Promise;
+
+interface CryptoOption {
+    type: string,
+    fields: string[]
+}
+
+export interface CryptoOptions {
+    [identifier: string]: string | CryptoOption
+}
 
 export const tableEncryptionOptions = {
     DATA: 'NON_INDEXED_FIELDS',
@@ -33,14 +44,14 @@ export const cryptoOptions = tableEncryptionOptions;
 
 const tson = new Typeson().register([builtinTypes]);
 
-function overrideParseStoresSpec(origFunc) {
-    return function(stores, dbSchema) {
+function overrideParseStoresSpec(origFunc: Function) {
+    return function(stores: any, dbSchema: any) {
         stores._encryptionSettings = '++id';
         origFunc.call(this, stores, dbSchema);
     };
 }
 
-function compareArrays(a, b) {
+function compareArrays(a: any[], b: any[]) {
     if (a.length !== b.length) {
         return false;
     }
@@ -56,7 +67,7 @@ function compareArrays(a, b) {
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
-function encryptObject(key, object, nonce) {
+function encryptObject(key: Uint8Array, object: any, nonce: Uint8Array) {
     nonce = nonce || nacl.randomBytes(nacl.secretbox.nonceLength);
     const stringToEncrypt = tson.stringify(object);
     const encoded = encoder.encode(stringToEncrypt);
@@ -69,7 +80,7 @@ function encryptObject(key, object, nonce) {
 
 // this prevents changing the shape of the object so
 // the underlying engine can optimize the hidden class
-function hideValue(input) {
+function hideValue(input: any) {
     switch (typeof input) {
         case 'number':
             return 0;
@@ -85,7 +96,7 @@ function hideValue(input) {
     return {};
 }
 
-export default function encrypt(db, key, cryptoSettings, nonceOverride) {
+export default function encrypt(db: Dexie, key: Uint8Array, cryptoSettings: CryptoOptions, nonceOverride : Uint8Array | undefined) {
 
     if ((key instanceof Uint8Array) === false || key.length !== 32) {
         throw new Error('Dexie-encrypted requires a UInt8Array of length 32 for a encryption key.');
@@ -96,14 +107,14 @@ export default function encrypt(db, key, cryptoSettings, nonceOverride) {
         overrideParseStoresSpec
     );
 
-    function encryptWithRule(table, entity, rule) {
+    function encryptWithRule(table: Dexie.Table<any, any>, entity: any, rule: CryptoOption | string) {
         if (rule === undefined) {
             return entity;
         }
 
-        const toEncrypt = {};
+        const toEncrypt: any = {};
 
-        if (rule.type === cryptoOptions.BLACKLIST) {
+        if (typeof rule !== 'string' && rule.type === cryptoOptions.BLACKLIST) {
             for (let i = 0; i < rule.fields.length; i++) {
                 toEncrypt[rule.fields[i]] = entity[rule.fields[i]];
                 entity[rule.fields[i]] = hideValue(entity[rule.fields[i]]);
@@ -111,7 +122,7 @@ export default function encrypt(db, key, cryptoSettings, nonceOverride) {
         } else {
             Object.assign(toEncrypt, entity);
             const indices = table.schema.indexes.map(index => index.name);
-            const whitelist = rule.type === cryptoOptions.WHITELIST ? rule.fields : [];
+            const whitelist = typeof rule !== 'string' && rule.type === cryptoOptions.WHITELIST ? rule.fields : [];
             for (const key in entity) {
                 if (
                     key !== table.schema.primKey.name &&
@@ -129,7 +140,7 @@ export default function encrypt(db, key, cryptoSettings, nonceOverride) {
         return entity;
     }
 
-    function decryptWithRule(entity, rule) {
+    function decryptWithRule(entity: any, rule: CryptoOption | string) {
         if (rule === undefined) {
             return entity;
         }
@@ -142,7 +153,7 @@ export default function encrypt(db, key, cryptoSettings, nonceOverride) {
             const rawDecrypted = nacl.secretbox.open(message, nonce, key);
             const stringified = decoder.decode(rawDecrypted);
             const decrypted = tson.parse(stringified);
-            const toReturn = {};
+            const toReturn: any = {};
             for (const k in entity) {
                 if (decrypted.hasOwnProperty(k)) {
                     toReturn[k] = decrypted[k];
@@ -156,7 +167,7 @@ export default function encrypt(db, key, cryptoSettings, nonceOverride) {
     }
 
     db.on('ready', function() {
-        return db._encryptionSettings
+        return db.table('_encryptionSettings')
             .toCollection()
             .last()
             .then(oldSettings => {
@@ -221,7 +232,7 @@ export default function encrypt(db, key, cryptoSettings, nonceOverride) {
                 );
             })
             .then(function() {
-                return db._encryptionSettings.put(cryptoSettings);
+                return db.table('_encryptionSettings').put(cryptoSettings);
             }).catch(error => {
                 if (error.name === 'NotFoundError') {
                     console.error("Dexie-encrypted can't find its encryption table. You may need to bump your database version.");

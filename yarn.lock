@@ -4388,6 +4388,11 @@ type-check@~0.3.2:
   dependencies:
     prelude-ls "~1.1.2"
 
+typescript@^3.6.3:
+  version "3.6.3"
+  resolved "https://repository.mark43.io/api/npm/npm-all/typescript/-/typescript-3.6.3.tgz#fea942fabb20f7e1ca7164ff626f1a9f3f70b4da"
+  integrity sha1-/qlC+rsg9+HKcWT/Ym8anz9wtNo=
+
 typeson-registry@^1.0.0-alpha.20, typeson-registry@^1.0.0-alpha.28:
   version "1.0.0-alpha.28"
   resolved "https://repository.mark43.io/api/npm/npm-all/typeson-registry/-/typeson-registry-1.0.0-alpha.28.tgz#cc76b71cdafa7f39c0d39fba9573114675ff098b"
