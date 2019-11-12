@@ -134,6 +134,15 @@ Object {
         "inbound": true,
         "rows": Array [
           Object {
+            "$types": Object {
+              "__key_change_detection": "uint8array2",
+              "__key_change_detection.buffer": "arraybuffer",
+            },
+            "__key_change_detection": Object {
+              "buffer": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAVsCc5OcA42SHmcWLiHEBYQNioi8BIm+cOUz6Ty71KOZXDvC24RhChuXrxg9x6YnP47cB/mCw8Cz5am7lnIhB7hAg6yECG+/TXg==",
+              "byteOffset": 0,
+              "length": 97,
+            },
             "friends": "NON_INDEXED_FIELDS",
             "id": 1,
           },
