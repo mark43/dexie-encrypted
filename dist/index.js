@@ -90,8 +90,9 @@ function hideValue(input) {
     return {};
 }
 
-function encrypt(db, keyOrPromise, cryptoSettings, nonceOverride) {
+function encrypt(db, keyOrPromise, cryptoSettings, nonceOverride, onKeyChange) {
     let keyPromise;
+
     if (keyOrPromise.then) {
         keyPromise = keyOrPromise;
     } else if (keyOrPromise instanceof Uint8Array && keyOrPromise.length === 32) {
@@ -99,8 +100,6 @@ function encrypt(db, keyOrPromise, cryptoSettings, nonceOverride) {
     } else {
         throw new Error('Dexie-encrypted requires a UInt8Array of length 32 for a encryption key.');
     }
-
-    let key;
 
     db.Version.prototype._parseStoresSpec = override(
         db.Version.prototype._parseStoresSpec,
@@ -176,6 +175,8 @@ function encrypt(db, keyOrPromise, cryptoSettings, nonceOverride) {
         return entity;
     }
 
+    let key;
+
     db.on('ready', function() {
         let encryptionSettings;
 
@@ -206,6 +207,9 @@ function encrypt(db, keyOrPromise, cryptoSettings, nonceOverride) {
                             ? oldSettings['__key_change_detection']
                             : null;
 
+                        let onKeyChangeResult;
+                        let keyChangePromise = Promise.resolve();
+
                         if (changeDetectionObj) {
                             const nonce = changeDetectionObj.slice(0, nacl.secretbox.nonceLength);
                             const message = changeDetectionObj.slice(
@@ -215,17 +219,19 @@ function encrypt(db, keyOrPromise, cryptoSettings, nonceOverride) {
                             const rawDecrypted = nacl.secretbox.open(message, nonce, key);
 
                             if (!rawDecrypted) {
-                                // The key has changed so we are deleting the tables since that means
-                                // a new session has been started
-                                return Promise.all(
-                                    db.tables.map(function(table) {
-                                        return table.clear();
-                                    })
-                                );
+                                // The key has changed. Let's call the handler
+                                onKeyChangeResult = onKeyChange(db);
+
+                                keyChangePromise = onKeyChangeResult.then
+                                    ? onKeyChangeResult
+                                    : new Promise(resolve => {
+                                          resolve(onKeyChangeResult);
+                                      });
                             }
                         }
 
                         return Promise.all(
+                            keyChangePromise,
                             db.tables.map(function(table) {
                                 const oldSetting = oldSettings
                                     ? oldSettings[table.name]
@@ -294,6 +300,9 @@ function encrypt(db, keyOrPromise, cryptoSettings, nonceOverride) {
                                     .then(setupHooks);
                             })
                         );
+                    })
+                    .then(function() {
+                        return encryptionSettings.clear();
                     })
                     .then(function() {
                         return encryptionSettings.put({
