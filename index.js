@@ -85,9 +85,8 @@ function hideValue(input) {
     return {};
 }
 
-export default function encrypt(db, keyOrPromise, cryptoSettings, nonceOverride, onKeyChange) {
+export default function encrypt(db, keyOrPromise, cryptoSettings, onKeyChange, nonceOverride) {
     let keyPromise;
-
     if (keyOrPromise.then) {
         keyPromise = keyOrPromise;
     } else if (keyOrPromise instanceof Uint8Array && keyOrPromise.length === 32) {
@@ -324,4 +323,37 @@ export default function encrypt(db, keyOrPromise, cryptoSettings, nonceOverride,
     });
 }
 
-Object.assign(encrypt, cryptoOptions);
+export function clearAllTables(db) {
+    return Promise.all(
+        db.tables.map(function(table) {
+            return table.clear();
+        })
+    );
+}
+
+export async function clearEncryptedTables(db) {
+    let encryptionSettings;
+
+    try {
+        encryptionSettings = await db
+            .table('_encryptionSettings')
+            .toCollection()
+            .last();
+    } catch (error) {
+        throw new Error(
+            "Dexie-encrypted can't find its encryption table. You may need to bump your database version."
+        );
+    }
+
+    const promises = Object.keys(encryptionSettings).map(async function(key) {
+        const encryptionSettingValue = encryptionSettings[key];
+
+        if (tableEncryptionOptions[encryptionSettingValue]) {
+            await db.table(key).clear();
+        }
+    });
+
+    return Promise.all(promises);
+}
+
+Object.assign(encrypt, cryptoOptions, clearAllTables, clearEncryptedTables);

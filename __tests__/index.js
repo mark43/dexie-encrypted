@@ -6,7 +6,7 @@ import 'dexie-export-import';
 
 import nacl from 'tweetnacl';
 
-import encrypt from '../index';
+import encrypt, { clearAllTables, clearEncryptedTables } from '../index';
 
 const keyPair = nacl.sign.keyPair.fromSeed(new Uint8Array(32));
 
@@ -31,6 +31,7 @@ describe('Encrypting', () => {
             {
                 friends: encrypt.DATA,
             },
+            clearAllTables,
             new Uint8Array(24)
         );
 
@@ -72,6 +73,7 @@ describe('Encrypting', () => {
                     fields: ['picture'],
                 },
             },
+            clearAllTables,
             new Uint8Array(24)
         );
 
@@ -112,6 +114,7 @@ describe('Encrypting', () => {
                     fields: ['street'],
                 },
             },
+            clearAllTables,
             new Uint8Array(24)
         );
 
@@ -149,6 +152,7 @@ describe('Encrypting', () => {
             {
                 friends: encrypt.DATA,
             },
+            clearAllTables,
             new Uint8Array(24)
         );
 
@@ -182,6 +186,7 @@ describe('Encrypting', () => {
             {
                 friends: encrypt.DATA,
             },
+            clearAllTables,
             new Uint8Array(24)
         );
 
@@ -208,6 +213,7 @@ describe('Encrypting', () => {
             {
                 friends: encrypt.DATA,
             },
+            clearAllTables,
             new Uint8Array(24)
         );
 
@@ -234,6 +240,7 @@ describe('Encrypting', () => {
                     fields: ['street'],
                 },
             },
+            clearAllTables,
             new Uint8Array(24)
         );
 
@@ -252,7 +259,6 @@ describe('Encrypting', () => {
         };
 
         await db.friends.add(original);
-        console.log('dome adding friends');
 
         await db.close();
 
@@ -266,6 +272,7 @@ describe('Encrypting', () => {
                     fields: ['picture'],
                 },
             },
+            clearAllTables,
             new Uint8Array(24)
         );
 
@@ -294,6 +301,7 @@ describe('Encrypting', () => {
             {
                 friends: encrypt.DATA,
             },
+            clearAllTables,
             new Uint8Array(24)
         );
 
@@ -335,6 +343,7 @@ describe('Encrypting', () => {
             {
                 friends: encrypt.DATA,
             },
+            clearAllTables,
             new Uint8Array(24)
         );
 
@@ -355,6 +364,7 @@ describe('Encrypting', () => {
                 {
                     friends: encrypt.DATA,
                 },
+                clearAllTables,
                 new Uint8Array(24)
             );
         }).toThrow('Dexie-encrypted requires a UInt8Array of length 32 for a encryption key.');
@@ -366,6 +376,7 @@ describe('Encrypting', () => {
                 {
                     friends: encrypt.DATA,
                 },
+                clearAllTables,
                 new Uint8Array(24)
             );
         }).toThrow('Dexie-encrypted requires a UInt8Array of length 32 for a encryption key.');
@@ -377,6 +388,7 @@ describe('Encrypting', () => {
                 {
                     friends: encrypt.DATA,
                 },
+                clearAllTables,
                 new Uint8Array(24)
             );
         }).toThrow('Dexie-encrypted requires a UInt8Array of length 32 for a encryption key.');
@@ -393,6 +405,7 @@ describe('Encrypting', () => {
             {
                 friends: encrypt.DATA,
             },
+            clearAllTables,
             new Uint8Array(24)
         );
 
@@ -413,6 +426,7 @@ describe('Encrypting', () => {
             {
                 friends: encrypt.DATA,
             },
+            clearAllTables,
             new Uint8Array(24)
         );
 
@@ -462,6 +476,7 @@ describe('Encrypting', () => {
             {
                 friends: encrypt.DATA,
             },
+            clearAllTables,
             new Uint8Array(24)
         );
 
@@ -493,14 +508,6 @@ describe('Encrypting', () => {
     });
 
     it('should execute callback when key changes', async done => {
-        const clearTables = db => {
-            return Promise.all(
-                db.tables.map(function(table) {
-                    return table.clear();
-                })
-            );
-        };
-
         const db = new Dexie('key-change-test');
         const key = new Uint8Array(32);
         const key2 = new Uint8Array(32);
@@ -514,8 +521,8 @@ describe('Encrypting', () => {
             {
                 friends: encrypt.DATA,
             },
-            new Uint8Array(24),
-            clearTables
+            clearEncryptedTables,
+            new Uint8Array(24)
         );
 
         // Declare tables, IDs and indexes
@@ -544,8 +551,8 @@ describe('Encrypting', () => {
             {
                 friends: encrypt.DATA,
             },
-            new Uint8Array(24),
-            clearTables
+            clearEncryptedTables,
+            new Uint8Array(24)
         );
 
         db2.version(1).stores({
