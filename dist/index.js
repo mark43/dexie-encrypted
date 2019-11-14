@@ -229,76 +229,90 @@ function encrypt(db, keyOrPromise, cryptoSettings, onKeyChange, nonceOverride) {
                             }
                         }
 
-                        return Promise.all(
-                            keyChangePromise,
-                            db.tables.map(function(table) {
-                                const oldSetting = oldSettings
-                                    ? oldSettings[table.name]
-                                    : undefined;
-                                const newSetting = cryptoSettings[table.name];
+                        return keyChangePromise.then(() => {
+                            return Promise.all(
+                                db.tables.map(function(table) {
+                                    const oldSetting = oldSettings
+                                        ? oldSettings[table.name]
+                                        : undefined;
+                                    const newSetting = cryptoSettings[table.name];
 
-                                function setupHooks() {
-                                    if (newSetting === undefined) {
-                                        return;
-                                    }
-                                    table.hook('creating', function(primKey, obj) {
-                                        const preservedValue = { ...obj };
-                                        encryptWithRule(table, obj, newSetting);
-                                        this.onsuccess = () => {
-                                            delete obj.__encryptedData;
-                                            Object.assign(obj, preservedValue);
-                                        };
-                                        this.onerror = () => {
-                                            delete obj.__encryptedData;
-                                            Object.assign(obj, preservedValue);
-                                        };
-                                    });
-                                    table.hook('updating', function(modifications, primKey, obj) {
-                                        const decrypted = decryptWithRule({ ...obj }, newSetting);
-                                        const updates = {
-                                            ...decrypted,
-                                            ...modifications,
-                                        };
-                                        const encrypted = encryptWithRule(
-                                            table,
-                                            updates,
-                                            newSetting
-                                        );
-                                        return encrypted;
-                                    });
-                                    table.hook('reading', function(obj) {
-                                        return decryptWithRule(obj, newSetting);
-                                    });
-                                }
-
-                                if (oldSetting === newSetting) {
-                                    // no upgrade needed.
-                                    setupHooks();
-                                    return;
-                                }
-                                if (oldSetting === undefined || newSetting === undefined) ; else if (
-                                    typeof oldSetting !== 'string' &&
-                                    typeof newSetting !== 'string'
-                                ) {
-                                    // both non-strings. Figure out if they're the same.
-                                    if (newSetting.type === oldSetting.type) {
-                                        if (compareArrays(newSetting.fields, oldSetting.fields)) {
-                                            // no upgrade needed.
-                                            setupHooks();
+                                    function setupHooks() {
+                                        if (newSetting === undefined) {
                                             return;
                                         }
+                                        table.hook('creating', function(primKey, obj) {
+                                            const preservedValue = { ...obj };
+                                            encryptWithRule(table, obj, newSetting);
+                                            this.onsuccess = () => {
+                                                delete obj.__encryptedData;
+                                                Object.assign(obj, preservedValue);
+                                            };
+                                            this.onerror = () => {
+                                                delete obj.__encryptedData;
+                                                Object.assign(obj, preservedValue);
+                                            };
+                                        });
+                                        table.hook('updating', function(
+                                            modifications,
+                                            primKey,
+                                            obj
+                                        ) {
+                                            const decrypted = decryptWithRule(
+                                                { ...obj },
+                                                newSetting
+                                            );
+                                            const updates = {
+                                                ...decrypted,
+                                                ...modifications,
+                                            };
+                                            const encrypted = encryptWithRule(
+                                                table,
+                                                updates,
+                                                newSetting
+                                            );
+                                            return encrypted;
+                                        });
+                                        table.hook('reading', function(obj) {
+                                            return decryptWithRule(obj, newSetting);
+                                        });
                                     }
-                                }
-                                return table
-                                    .toCollection()
-                                    .modify(function(entity, ref) {
-                                        const decrypted = decryptWithRule(entity, oldSetting);
-                                        ref.value = encryptWithRule(table, decrypted, newSetting);
-                                        return true;
-                                    })
-                                    .then(setupHooks);
-                            })
-                        );
+
+                                    if (oldSetting === newSetting) {
+                                        // no upgrade needed.
+                                        setupHooks();
+                                        return;
+                                    }
+                                    if (oldSetting === undefined || newSetting === undefined) ; else if (
+                                        typeof oldSetting !== 'string' &&
+                                        typeof newSetting !== 'string'
+                                    ) {
+                                        // both non-strings. Figure out if they're the same.
+                                        if (newSetting.type === oldSetting.type) {
+                                            if (
+                                                compareArrays(newSetting.fields, oldSetting.fields)
+                                            ) {
+                                                // no upgrade needed.
+                                                setupHooks();
+                                                return;
+                                            }
+                                        }
+                                    }
+                                    return table
+                                        .toCollection()
+                                        .modify(function(entity, ref) {
+                                            const decrypted = decryptWithRule(entity, oldSetting);
+                                            ref.value = encryptWithRule(
+                                                table,
+                                                decrypted,
+                                                newSetting
+                                            );
+                                            return true;
+                                        })
+                                        .then(setupHooks);
+                                })
+                            );
+                        });
                     })
                     .then(function() {
                         return encryptionSettings.clear();
