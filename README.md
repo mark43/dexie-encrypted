@@ -41,12 +41,27 @@ await db.friends.add(friend);
 ## Arguments
 
 ```javascript
-encrypt(db, key, config);
+encrypt(db, key, config, onKeyChange);
 ```
 
 -   `db` - a Dexie database that has not had .version called.
 -   `key` - a Uint8Array of length 32, or a promise that will resolve with one. This will be used for both encryption and decryption.
 -   `config` - a table level configuration that determines how dexie-encrypted will encrypt.
+-   `onKeyChange` - callback function to be executed if encryption key changes
+
+## Utility functions
+```javascript
+clearAllTables(db);
+```
+
+-   `db` - a Dexie database
+
+```javascript
+clearEncryptedTables(db);
+```
+
+-   `db` - a Dexie database
+
 
 ## Configuration
 
