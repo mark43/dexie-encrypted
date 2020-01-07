@@ -370,4 +370,7 @@ export async function clearEncryptedTables(db) {
     return Promise.all(promises);
 }
 
-Object.assign(encrypt, cryptoOptions, clearAllTables, clearEncryptedTables);
+Object.assign(encrypt, cryptoOptions, {
+    clearAllTables: clearAllTables,
+    clearEncryptedTables: clearEncryptedTables,
+});

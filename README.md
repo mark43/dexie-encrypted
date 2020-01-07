@@ -51,9 +51,8 @@ encrypt(db, key, config, onKeyChange);
 
 ## Key Error Utility Functions
 
-- `clearAllTables(db): Promise` - clears all data from the database.
-- `clearEncryptedTables(db): Promise` - clears data from all the encrypted tables, leaving unencrypted tables untouched.
-
+-   `clearAllTables(db): Promise` - clears all data from the database.
+-   `clearEncryptedTables(db): Promise` - clears data from all the encrypted tables, leaving unencrypted tables untouched.
 
 ## Configuration
 

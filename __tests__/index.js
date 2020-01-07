@@ -22,6 +22,23 @@ const dbToJson = db => {
     });
 };
 
+describe('API', () => {
+    it('should be a function', () => {
+        expect(typeof encrypt).toBe('function');
+    });
+    it('should have cleanup functions that are functions', () => {
+        expect(typeof encrypt.clearAllTables).toBe('function');
+        expect(typeof encrypt.clearEncryptedTables).toBe('function');
+    });
+
+    it('should have configs that are strings', () => {
+        expect(typeof encrypt.DATA).toBe('string');
+        expect(typeof encrypt.NON_INDEXED_FIELDS).toBe('string');
+        expect(typeof encrypt.WHITELIST).toBe('string');
+        expect(typeof encrypt.BLACKLIST).toBe('string');
+    });
+})
+
 describe('Encrypting', () => {
     it('should encrypt data', async done => {
         const db = new Dexie('MyDatabase');
