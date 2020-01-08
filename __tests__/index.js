@@ -40,7 +40,7 @@ describe('API', () => {
 })
 
 describe('Encrypting', () => {
-    it('should encrypt data', async done => {
+    it('should encrypt data', async () => {
         const db = new Dexie('MyDatabase');
         encrypt(
             db,
@@ -72,95 +72,21 @@ describe('Encrypting', () => {
         readingDb.version(1).stores({
             friends: '++id, name, age',
         });
-        await readingDb.open();
-
-        const data = await dbToJson(readingDb);
-        expect(data).toMatchSnapshot();
-        done();
-    });
-
-    it('should encrypt whitelist', async done => {
-        const db = new Dexie('whitelist');
         encrypt(
-            db,
+            readingDb,
             keyPair.publicKey,
             {
-                friends: {
-                    type: encrypt.WHITELIST,
-                    fields: ['picture'],
-                },
+                friends: encrypt.DATA,
             },
             clearAllTables,
             new Uint8Array(24)
         );
-
-        // Declare tables, IDs and indexes
-        db.version(1).stores({
-            friends: '++id, name, age',
-        });
-
-        await db.open();
-
-        const original = {
-            name: 'Camilla',
-            age: 25,
-            street: 'East 13:th Street',
-            picture: 'camilla.png',
-        };
-
-        await db.friends.add(original);
-
-        const readingDb = new Dexie('whitelist');
-        readingDb.version(1).stores({
-            friends: '++id, name, age',
-        });
         await readingDb.open();
+        const out = await readingDb.friends.get(1);
 
-        const data = await dbToJson(readingDb);
-        expect(data).toMatchSnapshot();
-        done();
+        expect(out).toEqual({...original, id: 1})
     });
-    it('should encrypt blacklist', async done => {
-        const db = new Dexie('blacklist');
-        encrypt(
-            db,
-            keyPair.publicKey,
-            {
-                friends: {
-                    type: encrypt.BLACKLIST,
-                    fields: ['street'],
-                },
-            },
-            clearAllTables,
-            new Uint8Array(24)
-        );
 
-        // Declare tables, IDs and indexes
-        db.version(1).stores({
-            friends: '++id, name, age',
-        });
-
-        await db.open();
-
-        const original = {
-            name: 'Camilla',
-            age: 25,
-            street: 'East 13:th Street',
-            picture: 'camilla.png',
-        };
-
-        await db.friends.add(original);
-
-        const readingDb = new Dexie('blacklist');
-        readingDb.version(1).stores({
-            friends: '++id, name, age',
-        });
-        await readingDb.open();
-
-        const data = await dbToJson(readingDb);
-        expect(data).toMatchSnapshot();
-        done();
-    });
     it('should decrypt', async done => {
         const db = new Dexie('decrypt-test');
         encrypt(
@@ -246,69 +172,6 @@ describe('Encrypting', () => {
         done();
     });
 
-    it('should upgrade', async done => {
-        const db = new Dexie('upgrade-db');
-        encrypt(
-            db,
-            keyPair.publicKey,
-            {
-                friends: {
-                    type: encrypt.WHITELIST,
-                    fields: ['street'],
-                },
-            },
-            clearAllTables,
-            new Uint8Array(24)
-        );
-
-        // Declare tables, IDs and indexes
-        db.version(1).stores({
-            friends: '++id, name, age',
-        });
-
-        await db.open();
-
-        const original = {
-            name: 'Camilla',
-            age: 25,
-            street: 'East 13:th Street',
-            picture: 'camilla.png',
-        };
-
-        await db.friends.add(original);
-
-        await db.close();
-
-        const upgraded = new Dexie('upgrade-db');
-        encrypt(
-            upgraded,
-            keyPair.publicKey,
-            {
-                friends: {
-                    type: encrypt.WHITELIST,
-                    fields: ['picture'],
-                },
-            },
-            clearAllTables,
-            new Uint8Array(24)
-        );
-
-        upgraded.version(1).stores({
-            friends: '++id, name, age',
-        });
-
-        await upgraded.open();
-
-        const readingDb = new Dexie('upgrade-db');
-        readingDb.version(1).stores({
-            friends: '++id, name, age',
-        });
-        await readingDb.open();
-
-        const data = await dbToJson(readingDb);
-        expect(data).toMatchSnapshot();
-        done();
-    });
 
     it('should not modify your object', async done => {
         const db = new Dexie('MyDatabase');
@@ -344,74 +207,6 @@ describe('Encrypting', () => {
         done();
     });
 
-    it('should have helpful error messages if you need to bump your version', async done => {
-        const db = new Dexie('no-crypt-check');
-        db.version(1).stores({
-            friends: '++id, name, age',
-        });
-
-        await db.open();
-        await db.close();
-
-        const db2 = new Dexie('no-crypt-check');
-        encrypt(
-            db2,
-            keyPair.publicKey,
-            {
-                friends: encrypt.DATA,
-            },
-            clearAllTables,
-            new Uint8Array(24)
-        );
-
-        db2.version(1).stores({
-            friends: '++id, name, age',
-        });
-
-        expect(db2.open()).rejects.toThrow();
-        done();
-    });
-
-    it('should have helpful error messages if your key is not a Uint8Array', async done => {
-        const db = new Dexie('key-check');
-        expect(() => {
-            encrypt(
-                db,
-                [1, 2, 3],
-                {
-                    friends: encrypt.DATA,
-                },
-                clearAllTables,
-                new Uint8Array(24)
-            );
-        }).toThrow('Dexie-encrypted requires a UInt8Array of length 32 for a encryption key.');
-
-        expect(() => {
-            encrypt(
-                db,
-                new Uint8Array(31),
-                {
-                    friends: encrypt.DATA,
-                },
-                clearAllTables,
-                new Uint8Array(24)
-            );
-        }).toThrow('Dexie-encrypted requires a UInt8Array of length 32 for a encryption key.');
-
-        expect(() => {
-            encrypt(
-                db,
-                new Uint16Array(32),
-                {
-                    friends: encrypt.DATA,
-                },
-                clearAllTables,
-                new Uint8Array(24)
-            );
-        }).toThrow('Dexie-encrypted requires a UInt8Array of length 32 for a encryption key.');
-
-        done();
-    });
 
     it('should not explode if you get something undefined', async done => {
         const db = new Dexie('explode-undefined');
@@ -480,16 +275,13 @@ describe('Encrypting', () => {
         const data = await dbToJson(readingDb);
 
         expect(out).toEqual(updated);
-        expect(data).toMatchSnapshot();
     });
 
-    it('should wait for a promise to resolve with a key if given a promise', async done => {
-        const db = new Dexie('async-key');
-
-        const keyPromise = Promise.resolve(keyPair.publicKey);
+    it('should still work when you update a child object', async () => {
+        const db = new Dexie('in-and-out-test');
         encrypt(
             db,
-            keyPromise,
+            keyPair.publicKey,
             {
                 friends: encrypt.DATA,
             },
@@ -499,7 +291,7 @@ describe('Encrypting', () => {
 
         // Declare tables, IDs and indexes
         db.version(1).stores({
-            friends: '++id, name, age',
+            friends: '++id, age',
         });
 
         await db.open();
@@ -507,44 +299,50 @@ describe('Encrypting', () => {
         const original = {
             name: 'Camilla',
             age: 25,
-            street: 'East 13:th Street',
-            picture: 'camilla.png',
+            attrs: {
+                picture: 'camilla.png',
+                street: 'East 13:th Street',
+            }
         };
 
-        await db.friends.add(original);
+        await db.friends.add({ ...original });
 
-        const readingDb = new Dexie('async-key');
-        readingDb.version(1).stores({
-            friends: '++id, name, age',
-        });
+        const updated = {
+            id: 1,
+            name: 'Someone other than Camilla',
+            age: 25,
+            attrs: {
+                picture: 'camilla.png',
+                street: 'East 13,000:th Street',
+            }
+        };
+
+        await db.friends.put(updated);
+
+        const out = await db.friends.get(1);
+
+        const readingDb = new Dexie('in-and-out-test');
         await readingDb.open();
+        // const data = await dbToJson(readingDb);
 
-        const data = await dbToJson(readingDb);
-        expect(data).toMatchSnapshot();
-        done();
+        expect(out).toEqual(updated);
     });
 
-    it('should execute callback when key changes', async done => {
-        const db = new Dexie('key-change-test');
-        const key = new Uint8Array(32);
-        const key2 = new Uint8Array(32);
-
-        key.set([1, 2, 3], 0);
-        key2.set([1, 2, 3], 1);
-
+    it.only('should still work when you have a key with dots in it', async () => {
+        const db = new Dexie('dots-test');
         encrypt(
             db,
-            key,
+            keyPair.publicKey,
             {
                 friends: encrypt.DATA,
             },
-            clearEncryptedTables,
+            clearAllTables,
             new Uint8Array(24)
         );
 
         // Declare tables, IDs and indexes
         db.version(1).stores({
-            friends: '++id, name, age',
+            friends: '++id, age',
         });
 
         await db.open();
@@ -552,34 +350,33 @@ describe('Encrypting', () => {
         const original = {
             name: 'Camilla',
             age: 25,
-            street: 'East 13:th Street',
-            picture: 'camilla.png',
+            'upside.down': false,
+            attrs: {
+                picture: 'camilla.png',
+             street: 'East 13:th Street',
+            }
         };
 
         await db.friends.add({ ...original });
 
-        const db2 = new Dexie('key-change-test');
+        const updated = {
+            id: 1,
+            name: 'Someone other than Camilla',
+            age: 25,
+            'upside.down': true,
+            attrs: {
+                picture: 'camilla.png',
+             street: 'East 13,000:th Street',
+            }
+        };
 
-        expect(await db.friends.get(1)).not.toEqual(undefined);
+        await db.friends.put(updated);
 
-        encrypt(
-            db2,
-            key2,
-            {
-                friends: encrypt.DATA,
-            },
-            clearEncryptedTables,
-            new Uint8Array(24)
-        );
+        const out = await db.friends.get(1);
+        // const data = await dbToJson(db);
+        // console.log(JSON.stringify(data, null, 4));
 
-        db2.version(1).stores({
-            friends: '++id, name, age',
-        });
-
-        await db2.open();
-
-        const friends = await db2.friends.get(1);
-        expect(friends).toEqual(undefined);
-        done();
+        expect(out).toEqual(updated);
     });
+
 });

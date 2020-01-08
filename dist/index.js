@@ -128,7 +128,6 @@ function encrypt(db, keyOrPromise, cryptoSettings, onKeyChange, nonceOverride) {
                 entity[rule.fields[i]] = hideValue(entity[rule.fields[i]]);
             }
         } else {
-            Object.assign(toEncrypt, entity);
             const indices = table.schema.indexes.map(index => index.name);
             const whitelist = rule.type === cryptoOptions.WHITELIST ? rule.fields : [];
             for (const key in entity) {
@@ -253,22 +252,10 @@ function encrypt(db, keyOrPromise, cryptoSettings, onKeyChange, nonceOverride) {
                                                 Object.assign(obj, preservedValue);
                                             };
                                         });
-                                        table.hook('updating', function(
-                                            modifications,
-                                            primKey,
-                                            obj
-                                        ) {
-                                            const decrypted = decryptWithRule(
-                                                { ...obj },
-                                                newSetting
-                                            );
-                                            const updates = {
-                                                ...decrypted,
-                                                ...modifications,
-                                            };
+                                        table.hook('updating', function(modifications) {
                                             const encrypted = encryptWithRule(
                                                 table,
-                                                updates,
+                                                {...this.value},
                                                 newSetting
                                             );
                                             return encrypted;
