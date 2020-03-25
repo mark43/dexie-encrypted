@@ -254,6 +254,7 @@ describe('Encrypting', () => {
             age: 25,
             street: 'East 13:th Street',
             picture: 'camilla.png',
+            isFriendly: true
         };
 
         await db.friends.add({ ...original });
@@ -264,6 +265,7 @@ describe('Encrypting', () => {
             age: 25,
             street: 'East 13,000:th Street',
             picture: 'camilla.png',
+            isFriendly: false
         };
 
         await db.friends.put(updated);
@@ -328,7 +330,7 @@ describe('Encrypting', () => {
         expect(out).toEqual(updated);
     });
 
-    it.only('should still work when you have a key with dots in it', async () => {
+    it.skip('should still work when you have a key with dots in it', async () => {
         const db = new Dexie('dots-test');
         encrypt(
             db,
@@ -378,5 +380,7 @@ describe('Encrypting', () => {
 
         expect(out).toEqual(updated);
     });
+
+
 
 });
