@@ -56,21 +56,21 @@ encrypt(db, key, config, onKeyChange);
 
 ## Configuration
 
-Dexie-encrypted can be configured to encrypt all the data of a table, to whitelist fields that are non-sensitive, or to blacklist sensitive fields.
+Dexie-encrypted can be configured to encrypt all the data of a table, to select fields that are senesitvie or non-sensitive.
 
 -   `encrypt.NON_INDEXED_FIELDS` - all data other than indices will be encrypted.
--   `encrypt.WHITELIST` - all data other than indices and whitelisted fields will be encrypted.
--   `encrypt.BLACKLIST` - listed fields will be encrypted.
+-   `encrypt.UNENCRYPTED_LIST` - all data other than indices and whitelisted fields will be encrypted.
+-   `encrypt.ENCRYPT_LIST` - listed fields will be encrypted.
 
 ```javascript
 encrypt(db, symmetricKey, {
     users: encrypt.NON_INDEXED_FIELDS,
     friends: {
-        type: encrypt.WHITELIST,
+        type: encrypt.UNENCRYPTED_LIST,
         fields: ['street', 'picture'], // these two fields and indices will be plain text
     },
     enemies: {
-        type: encrypt.BLACKLIST,
+        type: encrypt.ENCRYPT_LIST,
         fields: ['picture', 'isMortalEnemy'], // note: these cannot be indices
     },
 });

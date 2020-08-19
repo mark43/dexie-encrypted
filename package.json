@@ -1,41 +1,40 @@
 {
-  "name": "dexie-encrypted",
-  "version": "1.2.2",
-  "description": "Encryption middleware for Dexie",
-  "main": "dist/index.js",
-  "license": "MIT",
-  "files": [
-    "dist/index.js"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/mark43/dexie-encrypted.git"
-  },
-  "dependencies": {
-    "tweetnacl": "^1.0.1",
-    "typeson": "^5.13.0",
-    "typeson-registry": "^1.0.0-alpha.28"
-  },
-  "devDependencies": {
-    "@babel/core": "^7.5.5",
-    "@babel/preset-env": "^7.5.5",
-    "babel-eslint": "^10.0.3",
-    "babel-jest": "^24.9.0",
-    "dexie": "^2.0.4",
-    "dexie-export-import": "^1.0.0-beta.13",
-    "eslint": "^6.3.0",
-    "fake-indexeddb": "^2.1.1",
-    "jest": "^24.9.0",
-    "prettier": "^1.18.2",
-    "rollup": "^1.20.3",
-    "text-encoding": "^0.7.0"
-  },
-  "peerDependencies": {
-    "dexie": "^2.0.4 | ^3.0.0"
-  },
-  "scripts": {
-    "test": "jest",
-    "build": "rollup index.js --format commonjs --file dist/index.js",
-    "format": "prettier index.js README.md --write"
-  }
+    "name": "dexie-encrypted",
+    "version": "1.2.2",
+    "description": "Encryption middleware for Dexie",
+    "main": "dist/index.js",
+    "license": "MIT",
+    "files": [
+        "dist/index.js"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/mark43/dexie-encrypted.git"
+    },
+    "dependencies": {
+        "@types/bson": "4.0.2",
+        "bson": "4.1.0",
+        "jest": "26.4.0",
+        "tweetnacl": "^1.0.1"
+    },
+    "devDependencies": {
+        "@types/jest": "26.0.10",
+        "dexie": "^3.0.0",
+        "dexie-export-import": "^1.0.0-beta.13",
+        "eslint": "^6.3.0",
+        "fake-indexeddb": "^2.1.1",
+        "prettier": "^1.18.2",
+        "text-encoding": "^0.7.0",
+        "ts-jest": "26.2.0",
+        "tsc": "1.20150623.0",
+        "typescript": "3.9.7"
+    },
+    "peerDependencies": {
+        "dexie": "^3.0.0"
+    },
+    "scripts": {
+        "test": "jest",
+        "build": "tsc",
+        "format": "prettier index.js README.md --write"
+    }
 }

@@ -1,12 +1,16 @@
-import 'fake-indexeddb/auto';
-import '../test-utils/encoder';
+require('fake-indexeddb/auto');
 
-import Dexie from 'dexie';
-import 'dexie-export-import';
+const Dexie = require('dexie');
+require('dexie-export-import');
 
-import nacl from 'tweetnacl';
+const nacl = require('tweetnacl');
 
-import encrypt, { clearAllTables, clearEncryptedTables } from '../index';
+const {
+    encryptDatabase,
+    clearAllTables,
+    clearEncryptedTables,
+    cryptoOptions,
+} = require('../src/index');
 
 const keyPair = nacl.sign.keyPair.fromSeed(new Uint8Array(32));
 
@@ -22,31 +26,30 @@ const dbToJson = db => {
     });
 };
 
-describe('API', () => {
+describe.skip('API', () => {
     it('should be a function', () => {
-        expect(typeof encrypt).toBe('function');
+        expect(typeof encryptDatabase).toBe('function');
     });
     it('should have cleanup functions that are functions', () => {
-        expect(typeof encrypt.clearAllTables).toBe('function');
-        expect(typeof encrypt.clearEncryptedTables).toBe('function');
+        expect(typeof clearAllTables).toBe('function');
+        expect(typeof clearEncryptedTables).toBe('function');
     });
 
     it('should have configs that are strings', () => {
-        expect(typeof encrypt.DATA).toBe('string');
-        expect(typeof encrypt.NON_INDEXED_FIELDS).toBe('string');
-        expect(typeof encrypt.WHITELIST).toBe('string');
-        expect(typeof encrypt.BLACKLIST).toBe('string');
+        expect(typeof cryptoOptions.NON_INDEXED_FIELDS).toBe('string');
+        expect(typeof cryptoOptions.UNENCRYPTED_LIST).toBe('string');
+        expect(typeof cryptoOptions.ENCRYPT_LIST).toBe('string');
     });
-})
+});
 
 describe('Encrypting', () => {
     it('should encrypt data', async () => {
         const db = new Dexie('MyDatabase');
-        encrypt(
+        encryptDatabase(
             db,
             keyPair.publicKey,
             {
-                friends: encrypt.DATA,
+                friends: cryptoOptions.NON_INDEXED_FIELDS,
             },
             clearAllTables,
             new Uint8Array(24)
@@ -72,11 +75,11 @@ describe('Encrypting', () => {
         readingDb.version(1).stores({
             friends: '++id, name, age',
         });
-        encrypt(
+        encryptDatabase(
             readingDb,
             keyPair.publicKey,
             {
-                friends: encrypt.DATA,
+                friends: cryptoOptions.NON_INDEXED_FIELDS,
             },
             clearAllTables,
             new Uint8Array(24)
@@ -84,16 +87,16 @@ describe('Encrypting', () => {
         await readingDb.open();
         const out = await readingDb.friends.get(1);
 
-        expect(out).toEqual({...original, id: 1})
+        expect(out).toEqual({ ...original, id: 1 });
     });
 
     it('should decrypt', async done => {
         const db = new Dexie('decrypt-test');
-        encrypt(
+        encryptDatabase(
             db,
             keyPair.publicKey,
             {
-                friends: encrypt.DATA,
+                friends: cryptoOptions.NON_INDEXED_FIELDS,
             },
             clearAllTables,
             new Uint8Array(24)
@@ -123,11 +126,11 @@ describe('Encrypting', () => {
 
     it('should decrypt when the database is closed and reopened', async done => {
         const db = new Dexie('decrypt-test-2');
-        encrypt(
+        encryptDatabase(
             db,
             keyPair.publicKey,
             {
-                friends: encrypt.DATA,
+                friends: cryptoOptions.NON_INDEXED_FIELDS,
             },
             clearAllTables,
             new Uint8Array(24)
@@ -150,11 +153,11 @@ describe('Encrypting', () => {
         await db.friends.add({ ...original });
 
         const db2 = new Dexie('decrypt-test-2');
-        encrypt(
+        encryptDatabase(
             db2,
             keyPair.publicKey,
             {
-                friends: encrypt.DATA,
+                friends: cryptoOptions.NON_INDEXED_FIELDS,
             },
             clearAllTables,
             new Uint8Array(24)
@@ -172,14 +175,13 @@ describe('Encrypting', () => {
         done();
     });
 
-
     it('should not modify your object', async done => {
         const db = new Dexie('MyDatabase');
-        encrypt(
+        encryptDatabase(
             db,
             keyPair.publicKey,
             {
-                friends: encrypt.DATA,
+                friends: cryptoOptions.NON_INDEXED_FIELDS,
             },
             clearAllTables,
             new Uint8Array(24)
@@ -207,15 +209,14 @@ describe('Encrypting', () => {
         done();
     });
 
-
     it('should not explode if you get something undefined', async done => {
         const db = new Dexie('explode-undefined');
 
-        encrypt(
+        encryptDatabase(
             db,
             keyPair.publicKey,
             {
-                friends: encrypt.DATA,
+                friends: cryptoOptions.NON_INDEXED_FIELDS,
             },
             clearAllTables,
             new Uint8Array(24)
@@ -232,11 +233,11 @@ describe('Encrypting', () => {
 
     it('should still work when you update an existing entity', async () => {
         const db = new Dexie('in-and-out-test');
-        encrypt(
+        encryptDatabase(
             db,
             keyPair.publicKey,
             {
-                friends: encrypt.DATA,
+                friends: cryptoOptions.NON_INDEXED_FIELDS,
             },
             clearAllTables,
             new Uint8Array(24)
@@ -254,7 +255,7 @@ describe('Encrypting', () => {
             age: 25,
             street: 'East 13:th Street',
             picture: 'camilla.png',
-            isFriendly: true
+            isFriendly: true,
         };
 
         await db.friends.add({ ...original });
@@ -265,7 +266,7 @@ describe('Encrypting', () => {
             age: 25,
             street: 'East 13,000:th Street',
             picture: 'camilla.png',
-            isFriendly: false
+            isFriendly: false,
         };
 
         await db.friends.put(updated);
@@ -281,11 +282,11 @@ describe('Encrypting', () => {
 
     it('should still work when you update a child object', async () => {
         const db = new Dexie('in-and-out-test');
-        encrypt(
+        encryptDatabase(
             db,
             keyPair.publicKey,
             {
-                friends: encrypt.DATA,
+                friends: cryptoOptions.NON_INDEXED_FIELDS,
             },
             clearAllTables,
             new Uint8Array(24)
@@ -304,7 +305,7 @@ describe('Encrypting', () => {
             attrs: {
                 picture: 'camilla.png',
                 street: 'East 13:th Street',
-            }
+            },
         };
 
         await db.friends.add({ ...original });
@@ -316,7 +317,7 @@ describe('Encrypting', () => {
             attrs: {
                 picture: 'camilla.png',
                 street: 'East 13,000:th Street',
-            }
+            },
         };
 
         await db.friends.put(updated);
@@ -330,13 +331,13 @@ describe('Encrypting', () => {
         expect(out).toEqual(updated);
     });
 
-    it.skip('should still work when you have a key with dots in it', async () => {
+    it('should still work when you have a key with dots in it', async () => {
         const db = new Dexie('dots-test');
-        encrypt(
+        encryptDatabase(
             db,
             keyPair.publicKey,
             {
-                friends: encrypt.DATA,
+                friends: cryptoOptions.NON_INDEXED_FIELDS,
             },
             clearAllTables,
             new Uint8Array(24)
@@ -355,8 +356,8 @@ describe('Encrypting', () => {
             'upside.down': false,
             attrs: {
                 picture: 'camilla.png',
-             street: 'East 13:th Street',
-            }
+                street: 'East 13:th Street',
+            },
         };
 
         await db.friends.add({ ...original });
@@ -368,8 +369,8 @@ describe('Encrypting', () => {
             'upside.down': true,
             attrs: {
                 picture: 'camilla.png',
-             street: 'East 13,000:th Street',
-            }
+                street: 'East 13,000:th Street',
+            },
         };
 
         await db.friends.put(updated);
@@ -380,7 +381,4 @@ describe('Encrypting', () => {
 
         expect(out).toEqual(updated);
     });
-
-
-
 });

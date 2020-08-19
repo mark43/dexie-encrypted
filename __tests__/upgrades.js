@@ -1,25 +1,27 @@
-import 'fake-indexeddb/auto';
-import '../test-utils/encoder';
+require('fake-indexeddb/auto');
 
-import Dexie from 'dexie';
-import 'dexie-export-import';
+const Dexie = require('dexie');
+require('dexie-export-import');
 
-import nacl from 'tweetnacl';
+const nacl = require('tweetnacl');
 
-import encrypt, { clearAllTables, clearEncryptedTables } from '../index';
-
+const {
+    encryptDatabase,
+    clearAllTables,
+    clearEncryptedTables,
+    cryptoOptions,
+} = require('../src/index');
 const keyPair = nacl.sign.keyPair.fromSeed(new Uint8Array(32));
 
 describe.skip('Upgrades', () => {
-
     it('should upgrade', async () => {
         const db = new Dexie('upgrade-db');
-        encrypt(
+        encryptDatabase(
             db,
             keyPair.publicKey,
             {
                 friends: {
-                    type: encrypt.WHITELIST,
+                    type: cryptoOptions.UNENCRYPTED_LIST,
                     fields: ['street'],
                 },
             },
@@ -46,12 +48,12 @@ describe.skip('Upgrades', () => {
         await db.close();
 
         const upgraded = new Dexie('upgrade-db');
-        encrypt(
+        encryptDatabase(
             upgraded,
             keyPair.publicKey,
             {
                 friends: {
-                    type: encrypt.WHITELIST,
+                    type: cryptoOptions.UNENCRYPTED_LIST,
                     fields: ['picture'],
                 },
             },
@@ -69,11 +71,11 @@ describe.skip('Upgrades', () => {
         readingDb.version(1).stores({
             friends: '++id, name, age',
         });
-        encrypt(
+        encryptDatabase(
             readingDb,
             keyPair.publicKey,
             {
-                friends: encrypt.DATA,
+                friends: cryptoOptions.NON_INDEXED_FIELDS,
             },
             clearAllTables,
             new Uint8Array(24)
@@ -81,6 +83,6 @@ describe.skip('Upgrades', () => {
         await readingDb.open();
         const out = await readingDb.friends.get(1);
 
-        expect(out).toEqual({...original, id: 1})
+        expect(out).toEqual({ ...original, id: 1 });
     });
-})
+});
