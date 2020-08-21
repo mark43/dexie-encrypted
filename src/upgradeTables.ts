@@ -22,8 +22,14 @@ export async function upgradeTables<T extends Dexie>(
     oldSettings: CryptoSettings<T> | undefined,
     nonceOverride: Uint8Array | undefined
 ) {
-    return Promise.all(
-        db.tables.map(function(tbl) {
+    const unencryptedDb = new Dexie(db.name);
+    // @ts-ignore
+    const version = db._versions.find(v => v._cfg.version === db.verno);
+    unencryptedDb.version(db.verno).stores(version._cfg.storesSource);
+    await unencryptedDb.open();
+
+    return Dexie.Promise.all(
+        unencryptedDb.tables.map(async function(tbl) {
             const table = (tbl as unknown) as TableOf<T>;
             const oldSetting = oldSettings
                 ? oldSettings[(table.name as unknown) as keyof CryptoSettings<T>]
@@ -32,7 +38,7 @@ export async function upgradeTables<T extends Dexie>(
 
             if (oldSetting === newSetting) {
                 // no upgrade needed.
-                return;
+                return Dexie.Promise.resolve();
             }
             if (
                 oldSetting === undefined ||
@@ -55,7 +61,7 @@ export async function upgradeTables<T extends Dexie>(
                 }
             }
 
-            return table.toCollection().modify(function(entity: TableOf<T>, ref) {
+            await table.toCollection().modify(function(entity: TableOf<T>, ref) {
                 const decrypted = decryptEntity(entity, oldSetting, encryptionKey);
                 ref.value = encryptEntity(
                     table,
@@ -64,8 +70,8 @@ export async function upgradeTables<T extends Dexie>(
                     encryptionKey,
                     nonceOverride
                 );
-                return true;
             });
+            return;
         })
     );
 }

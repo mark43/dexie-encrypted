@@ -26,7 +26,7 @@ const dbToJson = db => {
     });
 };
 
-describe.skip('API', () => {
+describe('API', () => {
     it('should be a function', () => {
         expect(typeof encryptDatabase).toBe('function');
     });
@@ -59,7 +59,6 @@ describe('Encrypting', () => {
         db.version(1).stores({
             friends: '++id, name, age',
         });
-
         await db.open();
 
         const original = {
@@ -86,7 +85,6 @@ describe('Encrypting', () => {
         );
         await readingDb.open();
         const out = await readingDb.friends.get(1);
-
         expect(out).toEqual({ ...original, id: 1 });
     });
 

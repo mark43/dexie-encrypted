@@ -1,5 +1,11 @@
 import Dexie from 'dexie';
-import { CryptoSettings, CryptoSettingsTable, TableOf, cryptoOptions, CryptoSettingsTableType } from './types';
+import {
+    CryptoSettings,
+    CryptoSettingsTable,
+    TableOf,
+    cryptoOptions,
+    CryptoSettingsTableType,
+} from './types';
 import {
     encryptEntity,
     decryptEntity,
@@ -7,7 +13,7 @@ import {
     performDecryption,
 } from './encryptionMethods';
 import { upgradeTables } from './upgradeTables';
-import { checkForKeyChange, modernizeKeyChangeDetection } from './checkForKeyChange';
+import { checkForKeyChange } from './checkForKeyChange';
 import { installHooks } from './installHooks';
 
 // Import some usable helper functions
@@ -21,7 +27,7 @@ function overrideParseStoresSpec(origFunc: any) {
     };
 }
 
-export { cryptoOptions  } from './types';
+export { cryptoOptions } from './types';
 
 export function encryptDatabase<T extends Dexie>(
     db: T,
@@ -31,9 +37,7 @@ export function encryptDatabase<T extends Dexie>(
     nonceOverride?: Uint8Array
 ) {
     let keyPromise: Promise<Uint8Array>;
-    console.log(1);
     if (keyOrPromise instanceof Uint8Array) {
-        console.log('is right type', keyOrPromise);
         if (keyOrPromise.length !== 32) {
             throw new Error(
                 'Dexie-encrypted requires a Uint8Array of length 32 for an encryption key.'
@@ -42,12 +46,12 @@ export function encryptDatabase<T extends Dexie>(
         keyPromise = Promise.resolve(keyOrPromise);
         // @ts-ignore I want a runtime check below in case you're not using TS
     } else if ('then' in keyOrPromise) {
-        console.log('is promise');
-        keyPromise = keyOrPromise;
+        keyPromise = Dexie.Promise.resolve(keyOrPromise);
     } else {
-        throw new Error('Dexie-encrypted requires a UInt8Array of length 32 for an encryption key.');
+        throw new Error(
+            'Dexie-encrypted requires a Uint8Array of length 32 for an encryption key.'
+        );
     }
-    console.log(2);
 
     // @ts-ignore
     db.Version.prototype._parseStoresSpec = override(
@@ -55,7 +59,6 @@ export function encryptDatabase<T extends Dexie>(
         db.Version.prototype._parseStoresSpec,
         overrideParseStoresSpec
     );
-    console.log(3);
 
     if (db.verno > 0) {
         // Make sure new tables are added if calling encrypt after defining versions.
@@ -67,48 +70,50 @@ export function encryptDatabase<T extends Dexie>(
             );
         }
     }
-    console.log(4);
+    installHooks(db, cryptoSettings, keyPromise, nonceOverride);
 
-    db.on('ready', async function() {
-        let encryptionSettings = db.table('_encryptionSettings') as CryptoSettingsTable<T>;
-        let oldSettingsBeforeCheck: CryptoSettingsTableType<T> | undefined;
+    db.on('ready', async () => {
         try {
-            oldSettingsBeforeCheck = await encryptionSettings.toCollection().last();
+            let encryptionSettings = db.table('_encryptionSettings') as CryptoSettingsTable<T>;
+            let oldSettings: CryptoSettingsTableType<T> | undefined;
+            try {
+                oldSettings = await encryptionSettings.toCollection().last();
+            } catch (e) {
+                throw new Error(
+                    "Dexie-encrypted can't find its encryption table. You may need to bump your database version."
+                );
+            }
+
+            const encryptionKey = await keyPromise;
+            if (encryptionKey instanceof Uint8Array === false || encryptionKey.length !== 32) {
+                throw new Error(
+                    'Dexie-encrypted requires a Uint8Array of length 32 for a encryption key.'
+                );
+            }
+
+            await checkForKeyChange(db, oldSettings, encryptionKey, onKeyChange);
+
+            await upgradeTables(db, cryptoSettings, encryptionKey, oldSettings?.settings, nonceOverride);
+            await encryptionSettings.clear();
+            await encryptionSettings.put({
+                settings: cryptoSettings,
+                keyChangeDetection: performEncryption(
+                    encryptionKey,
+                    [1, 2, 3, 4, 5],
+                    new Uint8Array(24)
+                ),
+            });
+            return undefined;
         } catch (e) {
-            throw new Error(
-                "Dexie-encrypted can't find its encryption table. You may need to bump your database version."
-            );
+            return Dexie.Promise.reject(e);
         }
-
-        const encryptionKey = await keyPromise;
-        if (encryptionKey instanceof Uint8Array === false || encryptionKey.length !== 32) {
-            throw new Error(
-                'Dexie-encrypted requires a UInt8Array of length 32 for a encryption key.'
-            );
-        }
-
-        const oldSettings = modernizeKeyChangeDetection(oldSettingsBeforeCheck);
-        await checkForKeyChange(db, oldSettings, encryptionKey, onKeyChange);
-
-        await upgradeTables(db, cryptoSettings, encryptionKey, oldSettings?.settings, nonceOverride);
-
-        installHooks(db, cryptoSettings, encryptionKey, nonceOverride);
-
-        await encryptionSettings.clear();
-        await encryptionSettings.put({
-            settings: cryptoSettings,
-            keyChangeDetection: performEncryption(
-                encryptionKey,
-                [1, 2, 3, 4, 5],
-                new Uint8Array(24)
-            ),
-        });
     });
 }
 
 export function clearAllTables(db: Dexie) {
     return Promise.all(
         db.tables.map(function(table) {
+            console.log(table.name);
             return table.clear();
         })
     );
@@ -123,9 +128,9 @@ export async function clearEncryptedTables<T extends Dexie>(db: T) {
             throw new Error(
                 "Dexie-encrypted can't find its encryption table. You may need to bump your database version."
             );
-        })) as CryptoSettings<T>;
+        })) as CryptoSettingsTableType<T>;
 
-    const promises = Object.keys(encryptionSettings).map(async function(key) {
+    const promises = Object.keys(encryptionSettings.settings).map(async function(key) {
         await db.table(key).clear();
     });
 

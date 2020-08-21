@@ -1,7 +1,6 @@
 require('fake-indexeddb/auto');
 
 const Dexie = require('dexie');
-require('dexie-export-import');
 
 const nacl = require('tweetnacl');
 
@@ -48,9 +47,9 @@ describe('Error messaging', () => {
         setTimeout(done, 20);
     });
 
-    it.only('should have helpful error messages if your key is a regular array', async done => {
+    it('should have helpful error messages if your key is a regular array', () => {
         const db = new Dexie('key-check');
-        expect(() => {
+        expect(() =>
             encryptDatabase(
                 db,
                 [1, 2, 3],
@@ -59,11 +58,11 @@ describe('Error messaging', () => {
                 },
                 clearAllTables,
                 new Uint8Array(24)
-            );
-        }).toThrow('Dexie-encrypted requires a UInt8Array of length 32 for an encryption key.');
+            )
+        ).toThrow('Dexie-encrypted requires a Uint8Array of length 32 for an encryption key.');
     });
 
-    it('should have helpful error messages if your key is a Uint8Array of the wrong length', async done => {
+    it('should have helpful error messages if your key is a Uint8Array of the wrong length', async () => {
         const db = new Dexie('key-check');
         expect(() => {
             encryptDatabase(
@@ -75,28 +74,36 @@ describe('Error messaging', () => {
                 clearAllTables,
                 new Uint8Array(24)
             );
-        }).toThrow('Dexie-encrypted requires a UInt8Array of length 32 for an encryption key.');
+        }).toThrow('Dexie-encrypted requires a Uint8Array of length 32 for an encryption key.');
     });
 
     it('should have helpful error messages if your key is a promise that resolves with incorrect data', async done => {
         const db = new Dexie('key-check');
-        expect(() => {
-            encryptDatabase(
-                db,
-                new Promise(new Uint8Array(31)),
-                {
-                    friends: cryptoOptions.NON_INDEXED_FIELDS,
-                },
-                clearAllTables,
-                new Uint8Array(24)
-            );
-        }).toThrow('Dexie-encrypted requires a UInt8Array of length 32 for an encryption key.');
+        db.version(1).stores({
+            friends: '++id, name, age',
+        });
+        encryptDatabase(
+            db,
+            Promise.resolve(new Uint8Array(31)),
+            {
+                friends: cryptoOptions.NON_INDEXED_FIELDS,
+            },
+            clearAllTables,
+            new Uint8Array(24)
+        );
+
+        db.open().then(
+            () => {
+                throw 'no error';
+            },
+            () => done()
+        );
     });
 
-    it('should have helpful error messages if your key is a Uint16Array', async done => {
+    it('should have helpful error messages if your key is a Uint16Array', async () => {
         const db = new Dexie('key-check');
-        try {
-            await encryptDatabase(
+        expect(() =>
+            encryptDatabase(
                 db,
                 new Uint16Array(32),
                 {
@@ -104,12 +111,7 @@ describe('Error messaging', () => {
                 },
                 clearAllTables,
                 new Uint8Array(24)
-            );
-        } catch (e) {
-            expect(e.message).toBe(
-                'Dexie-encrypted requires a UInt8Array of length 32 for an encryption key.'
-            );
-        }
-        done();
+            )
+        ).toThrow('Dexie-encrypted requires a Uint8Array of length 32 for an encryption key.');
     });
 });
