@@ -379,4 +379,177 @@ describe('Encrypting', () => {
 
         expect(out).toEqual(updated);
     });
+
+    it('should work with queries', async () => {
+        const db = new Dexie('queries');
+        encryptDatabase(
+            db,
+            keyPair.publicKey,
+            {
+                friends: cryptoOptions.NON_INDEXED_FIELDS,
+            },
+            clearAllTables,
+            new Uint8Array(24)
+        );
+
+        // Declare tables, IDs and indexes
+        db.version(1).stores({
+            friends: '++id, name, age',
+        });
+
+        await db.open();
+
+        const data = [
+            {
+                name: 'Camilla',
+                age: 25,
+                street: 'East 13:th Street',
+                picture: 'camilla.png',
+            },
+            {
+                name: 'Allimac',
+                age: 52,
+                street: 'East 31:st Street',
+                picture: 'allimac.png',
+            },
+        ];
+
+        db.friends.bulkPut(data);
+
+        const friend = await db.friends
+            .where('age')
+            .above(40)
+            .toArray();
+
+        expect(friend).toMatchInlineSnapshot(`
+            Array [
+              Object {
+                "age": 52,
+                "id": 2,
+                "name": "Allimac",
+                "picture": "allimac.png",
+                "street": "East 31:st Street",
+              },
+            ]
+        `);
+    });
+
+    it('should work with anyOf', async () => {
+        const db = new Dexie('anyof');
+        encryptDatabase(
+            db,
+            keyPair.publicKey,
+            {
+                friends: cryptoOptions.NON_INDEXED_FIELDS,
+            },
+            clearAllTables,
+            new Uint8Array(24)
+        );
+
+        // Declare tables, IDs and indexes
+        db.version(1).stores({
+            friends: '++id, name, age',
+        });
+
+        await db.open();
+
+        const data = [
+            {
+                name: 'Camilla',
+                age: 25,
+                street: 'East 13:th Street',
+                picture: 'camilla.png',
+            },
+            {
+                name: 'Allimac',
+                age: 52,
+                street: 'East 31:st Street',
+                picture: 'allimac.png',
+            },
+        ];
+
+        db.friends.bulkPut(data);
+
+        const friend = await db.friends
+            .where('age')
+            .anyOf([25, 52])
+            .toArray();
+
+        expect(friend).toMatchInlineSnapshot(`
+            Array [
+              Object {
+                "age": 25,
+                "id": 1,
+                "name": "Camilla",
+                "picture": "camilla.png",
+                "street": "East 13:th Street",
+              },
+              Object {
+                "age": 52,
+                "id": 2,
+                "name": "Allimac",
+                "picture": "allimac.png",
+                "street": "East 31:st Street",
+              },
+            ]
+        `);
+    });
+
+    it('should work with anyOf', async () => {
+        const db = new Dexie('anyof');
+        encryptDatabase(
+            db,
+            keyPair.publicKey,
+            {
+                friends: cryptoOptions.NON_INDEXED_FIELDS,
+            },
+            clearAllTables,
+            new Uint8Array(24)
+        );
+
+        // Declare tables, IDs and indexes
+        db.version(1).stores({
+            friends: '++id, name, age',
+        });
+
+        await db.open();
+
+        const data = [
+            {
+                name: 'Camilla',
+                age: 25,
+                street: 'East 13:th Street',
+                picture: 'camilla.png',
+            },
+            {
+                name: 'Allimac',
+                age: 25,
+                street: 'East 31:st Street',
+                picture: 'allimac.png',
+            },
+        ];
+
+        db.friends.bulkPut(data);
+
+        const friend = await db.friends.bulkGet([1, 2]);
+
+        expect(friend).toMatchInlineSnapshot(`
+            Array [
+              Object {
+                "age": 25,
+                "id": 1,
+                "name": "Camilla",
+                "picture": "camilla.png",
+                "street": "East 13:th Street",
+              },
+              Object {
+                "age": 52,
+                "id": 2,
+                "name": "Allimac",
+                "picture": "allimac.png",
+                "street": "East 31:st Street",
+              },
+            ]
+        `);
+    });
 });

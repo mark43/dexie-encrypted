@@ -17,9 +17,11 @@ export type EncryptionOption<T extends Dexie.Table> =
 
 export const cryptoOptions = tableEncryptionOptions;
 
-export type CryptoSettings<T extends Dexie> = {
-    [U in keyof T]: T[U] extends Dexie.Table ? EncryptionOption<T[U]> : never;
-};
+export type CryptoSettings<T extends Dexie> = Partial<
+    {
+        [U in keyof T]: T[U] extends Dexie.Table ? EncryptionOption<T[U]> : never;
+    }
+>;
 
 export type TablesOf<T extends Dexie> = {
     [U in keyof T]: T[U] extends Dexie.Table ? T[U] : never;

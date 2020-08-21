@@ -2,15 +2,12 @@ import Dexie from 'dexie';
 import {
     CryptoSettings,
     CryptoSettingsTable,
-    TableOf,
     cryptoOptions,
     CryptoSettingsTableType,
 } from './types';
 import {
-    encryptEntity,
-    decryptEntity,
+
     performEncryption,
-    performDecryption,
 } from './encryptionMethods';
 import { upgradeTables } from './upgradeTables';
 import { checkForKeyChange } from './checkForKeyChange';
@@ -28,6 +25,10 @@ function overrideParseStoresSpec(origFunc: any) {
 }
 
 export { cryptoOptions } from './types';
+
+export const NON_INDEXED_FIELDS = cryptoOptions.NON_INDEXED_FIELDS
+export const ENCRYPT_LIST = cryptoOptions.ENCRYPT_LIST
+export const UNENCRYPTED_LIST = cryptoOptions.UNENCRYPTED_LIST
 
 export function encryptDatabase<T extends Dexie>(
     db: T,

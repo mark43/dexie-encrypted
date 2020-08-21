@@ -12,17 +12,16 @@
         "module": "commonjs",
         "moduleResolution": "node",
         "target": "es2015",
-        "noEmit": true,
         "lib": ["es7", "dom", "es2020"],
         "skipLibCheck": true,
         "noStrictGenericChecks": true,
         "allowSyntheticDefaultImports": true,
-        "jsx": "react",
         "esModuleInterop": true,
         "sourceMap": true,
         "resolveJsonModule": true,
-        "outDir": "./dist"
+        "outDir": "dist",
+        "declaration": true
     },
-    "include": ["./src/**/*"],
+    "include": ["src/**/*"],
     "exclude": ["node_modules"]
 }

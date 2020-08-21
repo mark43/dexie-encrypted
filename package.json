@@ -2,10 +2,10 @@
     "name": "dexie-encrypted",
     "version": "1.2.2",
     "description": "Encryption middleware for Dexie",
-    "main": "dist/index.js",
+    "main": "dist",
     "license": "MIT",
     "files": [
-        "dist/index.js"
+        "dist/*"
     ],
     "repository": {
         "type": "git",

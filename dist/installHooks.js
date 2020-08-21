@@ -1,13 +1,10 @@
-import Dexie from 'dexie';
-import { CryptoSettings, TablesOf } from './types';
-import { encryptEntity, decryptEntity } from './encryptionMethods';
-
-export function installHooks<T extends Dexie>(
-    db: T,
-    encryptionOptions: CryptoSettings<T>,
-    keyPromise: Promise<Uint8Array>,
-    nonceOverride: Uint8Array | undefined
-) {
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.installHooks = void 0;
+const tslib_1 = require("tslib");
+const dexie_1 = tslib_1.__importDefault(require("dexie"));
+const encryptionMethods_1 = require("./encryptionMethods");
+function installHooks(db, encryptionOptions, keyPromise, nonceOverride) {
     // this promise has to be resolved in order for the database to be open
     // but we also need to add the hooks before the db is open, so it's
     // guaranteed to happen before the key is actually needed.
@@ -15,40 +12,25 @@ export function installHooks<T extends Dexie>(
     keyPromise.then(realKey => {
         encryptionKey = realKey;
     });
-
     return db.use({
         stack: 'dbcore',
         name: 'encryption',
         level: 0,
         create(downlevelDatabase) {
-            return {
-                ...downlevelDatabase,
-                table(tn) {
-                    const tableName = tn as keyof TablesOf<T>;
-                    const table = downlevelDatabase.table(tableName as string);
+            return Object.assign(Object.assign({}, downlevelDatabase), { table(tn) {
+                    const tableName = tn;
+                    const table = downlevelDatabase.table(tableName);
                     if (tableName in encryptionOptions === false) {
                         return table;
                     }
-
                     const encryptionSetting = encryptionOptions[tableName];
-
-                    function encrypt(data: any) {
-                        return encryptEntity(
-                            table,
-                            data,
-                            encryptionSetting,
-                            encryptionKey,
-                            nonceOverride
-                        );
+                    function encrypt(data) {
+                        return encryptionMethods_1.encryptEntity(table, data, encryptionSetting, encryptionKey, nonceOverride);
                     }
-
-                    function decrypt(data: any) {
-                        return decryptEntity(data, encryptionSetting, encryptionKey);
+                    function decrypt(data) {
+                        return encryptionMethods_1.decryptEntity(data, encryptionSetting, encryptionKey);
                     }
-
-                    return {
-                        ...table,
-                        openCursor(req) {
+                    return Object.assign(Object.assign({}, table), { openCursor(req) {
                             return table.openCursor(req).then(cursor => {
                                 if (!cursor) {
                                     return cursor;
@@ -78,35 +60,28 @@ export function installHooks<T extends Dexie>(
                             });
                         },
                         get(req) {
-                            return table.get(req).then(decrypt);
+                            return table.get(req).then(item => {
+                                return decrypt(item);
+                            });
                         },
                         getMany(req) {
                             return table.getMany(req).then(items => {
-                                return items.map(decrypt);
+                                return items.map(item => item.then(decrypt));
                             });
-                        },
-                        query(req) {
+                        }, query(req) {
                             return table.query(req).then(res => {
-                                return Dexie.Promise.all(res.result.map(decrypt)).then(result => ({
-                                    ...res,
-                                    result,
-                                }));
+                                return dexie_1.default.Promise.all(res.result.map(item => decrypt(item))).then(result => (Object.assign(Object.assign({}, res), { result })));
                             });
                         },
                         mutate(req) {
                             if (req.type === 'add' || req.type === 'put') {
-                                return Dexie.Promise.all(req.values.map(encrypt)).then(values =>
-                                    table.mutate({
-                                        ...req,
-                                        values,
-                                    })
-                                );
+                                return dexie_1.default.Promise.all(req.values.map(item => encrypt(item))).then(values => table.mutate(Object.assign(Object.assign({}, req), { values })));
                             }
                             return table.mutate(req);
-                        },
-                    };
-                },
-            };
+                        } });
+                } });
         },
     });
 }
+exports.installHooks = installHooks;
+//# sourceMappingURL=installHooks.js.map

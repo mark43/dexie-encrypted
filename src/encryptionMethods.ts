@@ -17,7 +17,7 @@ export function performEncryption(key: Uint8Array, object: any, nonce: Uint8Arra
 export function encryptEntity<T extends Dexie.Table>(
     table: DBCoreTable | T,
     entity: TableType<T>,
-    rule: EncryptionOption<T>,
+    rule: EncryptionOption<T> | undefined,
     encryptionKey: Uint8Array,
     nonceOverride?: Uint8Array
 ) {
