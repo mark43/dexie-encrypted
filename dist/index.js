@@ -82,7 +82,6 @@ function encryptDatabase(db, keyOrPromise, cryptoSettings, onKeyChange, nonceOve
 exports.encryptDatabase = encryptDatabase;
 function clearAllTables(db) {
     return Promise.all(db.tables.map(function (table) {
-        console.log(table.name);
         return table.clear();
     }));
 }

@@ -114,7 +114,6 @@ export function encryptDatabase<T extends Dexie>(
 export function clearAllTables(db: Dexie) {
     return Promise.all(
         db.tables.map(function(table) {
-            console.log(table.name);
             return table.clear();
         })
     );
