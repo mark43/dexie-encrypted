@@ -60,22 +60,20 @@ function installHooks(db, encryptionOptions, keyPromise, nonceOverride) {
                             });
                         },
                         get(req) {
-                            return table.get(req).then(item => {
-                                return decrypt(item);
-                            });
+                            return table.get(req).then(decrypt);
                         },
                         getMany(req) {
                             return table.getMany(req).then(items => {
-                                return items.map(item => item.then(decrypt));
+                                return items.map(decrypt);
                             });
                         }, query(req) {
                             return table.query(req).then(res => {
-                                return dexie_1.default.Promise.all(res.result.map(item => decrypt(item))).then(result => (Object.assign(Object.assign({}, res), { result })));
+                                return dexie_1.default.Promise.all(res.result.map(decrypt)).then(result => (Object.assign(Object.assign({}, res), { result })));
                             });
                         },
                         mutate(req) {
                             if (req.type === 'add' || req.type === 'put') {
-                                return dexie_1.default.Promise.all(req.values.map(item => encrypt(item))).then(values => table.mutate(Object.assign(Object.assign({}, req), { values })));
+                                return dexie_1.default.Promise.all(req.values.map(encrypt)).then(values => table.mutate(Object.assign(Object.assign({}, req), { values })));
                             }
                             return table.mutate(req);
                         } });
