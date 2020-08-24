@@ -1,10 +1,68 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.installHooks = void 0;
+exports.installHooks = exports.decryptEntity = exports.encryptEntity = void 0;
 const tslib_1 = require("tslib");
 const dexie_1 = tslib_1.__importDefault(require("dexie"));
-const encryptionMethods_1 = require("./encryptionMethods");
-function installHooks(db, encryptionOptions, keyPromise, nonceOverride) {
+const types_1 = require("./types");
+function encryptEntity(table, entity, rule, encryptionKey, performEncryption, nonceOverride) {
+    if (rule === undefined) {
+        return entity;
+    }
+    const indexObjects = table.schema.indexes;
+    const indices = indexObjects.map(index => index.keyPath);
+    const toEncrypt = {};
+    const dataToStore = {};
+    const primaryKey = 'primKey' in table.schema ? table.schema.primKey.keyPath : table.schema.primaryKey.keyPath;
+    if (rule === types_1.cryptoOptions.NON_INDEXED_FIELDS) {
+        for (const key in entity) {
+            if (key === primaryKey || indices.includes(key)) {
+                dataToStore[key] = entity[key];
+            }
+            else {
+                toEncrypt[key] = entity[key];
+            }
+        }
+    }
+    else if (rule.type === types_1.cryptoOptions.ENCRYPT_LIST) {
+        for (const key in entity) {
+            if (key !== primaryKey && rule.fields.includes(key)) {
+                toEncrypt[key] = entity[key];
+            }
+            else {
+                dataToStore[key] = entity[key];
+            }
+        }
+    }
+    else {
+        const whitelist = rule.type === types_1.cryptoOptions.UNENCRYPTED_LIST ? rule.fields : [];
+        for (const key in entity) {
+            if (key !== primaryKey &&
+                // @ts-ignore
+                entity.hasOwnProperty(key) &&
+                indices.includes(key) === false &&
+                whitelist.includes(key) === false) {
+                toEncrypt[key] = entity[key];
+            }
+            else {
+                dataToStore[key] = entity[key];
+            }
+        }
+    }
+    // @ts-ignore
+    dataToStore.__encryptedData = performEncryption(encryptionKey, entity, nonceOverride);
+    return dataToStore;
+}
+exports.encryptEntity = encryptEntity;
+function decryptEntity(entity, rule, encryptionKey, performDecryption) {
+    if (rule === undefined || entity === undefined || !entity.__encryptedData) {
+        return entity;
+    }
+    const { __encryptedData } = entity, unencryptedFields = tslib_1.__rest(entity, ["__encryptedData"]);
+    const decrypted = performDecryption(encryptionKey, __encryptedData);
+    return Object.assign(Object.assign({}, unencryptedFields), decrypted);
+}
+exports.decryptEntity = decryptEntity;
+function installHooks(db, encryptionOptions, keyPromise, performEncryption, performDecryption, nonceOverride) {
     // this promise has to be resolved in order for the database to be open
     // but we also need to add the hooks before the db is open, so it's
     // guaranteed to happen before the key is actually needed.
@@ -25,10 +83,10 @@ function installHooks(db, encryptionOptions, keyPromise, nonceOverride) {
                     }
                     const encryptionSetting = encryptionOptions[tableName];
                     function encrypt(data) {
-                        return encryptionMethods_1.encryptEntity(table, data, encryptionSetting, encryptionKey, nonceOverride);
+                        return encryptEntity(table, data, encryptionSetting, encryptionKey, performEncryption, nonceOverride);
                     }
                     function decrypt(data) {
-                        return encryptionMethods_1.decryptEntity(data, encryptionSetting, encryptionKey);
+                        return decryptEntity(data, encryptionSetting, encryptionKey, performDecryption);
                     }
                     return Object.assign(Object.assign({}, table), { openCursor(req) {
                             return table.openCursor(req).then(cursor => {

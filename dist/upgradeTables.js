@@ -4,7 +4,7 @@ exports.upgradeTables = void 0;
 const tslib_1 = require("tslib");
 const dexie_1 = tslib_1.__importDefault(require("dexie"));
 const types_1 = require("./types");
-const encryptionMethods_1 = require("./encryptionMethods");
+const installHooks_1 = require("./installHooks");
 function compareArrays(a, b) {
     if (a.length !== b.length) {
         return false;
@@ -16,7 +16,7 @@ function compareArrays(a, b) {
     }
     return true;
 }
-function upgradeTables(db, cryptoSettings, encryptionKey, oldSettings, nonceOverride) {
+function upgradeTables(db, tableSettings, encryptionKey, oldSettings, encrypt, decrypt, nonceOverride) {
     return tslib_1.__awaiter(this, void 0, void 0, function* () {
         const unencryptedDb = new dexie_1.default(db.name);
         // @ts-ignore
@@ -29,7 +29,7 @@ function upgradeTables(db, cryptoSettings, encryptionKey, oldSettings, nonceOver
                 const oldSetting = oldSettings
                     ? oldSettings[table.name]
                     : undefined;
-                const newSetting = cryptoSettings[table.name];
+                const newSetting = tableSettings[table.name];
                 if (oldSetting === newSetting) {
                     // no upgrade needed.
                     return dexie_1.default.Promise.resolve();
@@ -53,8 +53,8 @@ function upgradeTables(db, cryptoSettings, encryptionKey, oldSettings, nonceOver
                     }
                 }
                 yield table.toCollection().modify(function (entity, ref) {
-                    const decrypted = encryptionMethods_1.decryptEntity(entity, oldSetting, encryptionKey);
-                    ref.value = encryptionMethods_1.encryptEntity(table, decrypted, newSetting, encryptionKey, nonceOverride);
+                    const decrypted = installHooks_1.decryptEntity(entity, oldSetting, encryptionKey, decrypt);
+                    ref.value = installHooks_1.encryptEntity(table, decrypted, newSetting, encryptionKey, encrypt, nonceOverride);
                 });
                 return;
             });

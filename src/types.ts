@@ -35,3 +35,20 @@ export type CryptoSettingsTableType<T extends Dexie> = {
 };
 
 export type CryptoSettingsTable<T extends Dexie> = Dexie.Table<CryptoSettingsTableType<T>, number>;
+
+export type EncryptionMethod = (
+    encryptionKey: Uint8Array,
+    input: any,
+    nonceOverride?: Uint8Array
+) => Uint8Array;
+export type DecryptionMethod = (encryptionKey: Uint8Array, input: Uint8Array) => any;
+
+export interface EncryptDatabaseParams<T extends Dexie> {
+    db: T;
+    encryptionKey: Uint8Array | Promise<Uint8Array>;
+    tableSettings: CryptoSettings<T>;
+    onKeyChange: (db: T) => Promise<any>;
+    encrypt: EncryptionMethod;
+    decrypt: DecryptionMethod;
+    nonceOverrideForTesting?: Uint8Array;
+}

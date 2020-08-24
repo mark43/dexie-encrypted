@@ -1,6 +1,12 @@
 import Dexie from 'dexie';
-import { TableOf, CryptoSettings, cryptoOptions } from './types';
-import { encryptEntity, decryptEntity } from './encryptionMethods';
+import {
+    TableOf,
+    CryptoSettings,
+    cryptoOptions,
+    EncryptionMethod,
+    DecryptionMethod,
+} from './types';
+import { encryptEntity, decryptEntity } from './installHooks';
 
 function compareArrays(a: any[], b: any[]) {
     if (a.length !== b.length) {
@@ -17,9 +23,11 @@ function compareArrays(a: any[], b: any[]) {
 
 export async function upgradeTables<T extends Dexie>(
     db: T,
-    cryptoSettings: CryptoSettings<T>,
+    tableSettings: CryptoSettings<T>,
     encryptionKey: Uint8Array,
     oldSettings: CryptoSettings<T> | undefined,
+    encrypt: EncryptionMethod,
+    decrypt: DecryptionMethod,
     nonceOverride: Uint8Array | undefined
 ) {
     const unencryptedDb = new Dexie(db.name);
@@ -34,7 +42,7 @@ export async function upgradeTables<T extends Dexie>(
             const oldSetting = oldSettings
                 ? oldSettings[(table.name as unknown) as keyof CryptoSettings<T>]
                 : undefined;
-            const newSetting = cryptoSettings[(table.name as unknown) as keyof CryptoSettings<T>];
+            const newSetting = tableSettings[(table.name as unknown) as keyof CryptoSettings<T>];
 
             if (oldSetting === newSetting) {
                 // no upgrade needed.
@@ -62,12 +70,13 @@ export async function upgradeTables<T extends Dexie>(
             }
 
             await table.toCollection().modify(function(entity: TableOf<T>, ref) {
-                const decrypted = decryptEntity(entity, oldSetting, encryptionKey);
+                const decrypted = decryptEntity(entity, oldSetting, encryptionKey, decrypt);
                 ref.value = encryptEntity(
                     table,
                     decrypted,
                     newSetting,
                     encryptionKey,
+                    encrypt,
                     nonceOverride
                 );
             });

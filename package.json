@@ -12,10 +12,10 @@
         "url": "https://github.com/mark43/dexie-encrypted.git"
     },
     "dependencies": {
-        "@types/bson": "4.0.2",
-        "bson": "4.1.0",
-        "jest": "26.4.0",
-        "tweetnacl": "^1.0.1"
+        "@stablelib/utf8": "1.0.0",
+        "tweetnacl": "1.0.3",
+        "typeson": "5.18.2",
+        "typeson-registry": "1.0.0-alpha.38"
     },
     "devDependencies": {
         "@types/jest": "26.0.10",
@@ -23,6 +23,7 @@
         "dexie-export-import": "^1.0.0-beta.13",
         "eslint": "^6.3.0",
         "fake-indexeddb": "^2.1.1",
+        "jest": "26.4.0",
         "prettier": "^1.18.2",
         "text-encoding": "^0.7.0",
         "ts-jest": "26.2.0",

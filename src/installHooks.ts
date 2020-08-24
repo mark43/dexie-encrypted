@@ -1,11 +1,98 @@
-import Dexie from 'dexie';
-import { CryptoSettings, TablesOf } from './types';
-import { encryptEntity, decryptEntity } from './encryptionMethods';
+import Dexie, { DBCoreTable, DBCoreIndex, IndexSpec } from 'dexie';
+import {
+    CryptoSettings,
+    TablesOf,
+    TableType,
+    EncryptionOption,
+    cryptoOptions,
+    EncryptionMethod,
+    DecryptionMethod,
+} from './types';
+
+export function encryptEntity<T extends Dexie.Table>(
+    table: DBCoreTable | T,
+    entity: TableType<T>,
+    rule: EncryptionOption<T> | undefined,
+    encryptionKey: Uint8Array,
+    performEncryption: EncryptionMethod,
+    nonceOverride?: Uint8Array
+) {
+    if (rule === undefined) {
+        return entity;
+    }
+
+    const indexObjects = table.schema.indexes as (IndexSpec | DBCoreIndex)[];
+    const indices = indexObjects.map(index => index.keyPath);
+    const toEncrypt: Partial<TableType<T>> = {};
+    const dataToStore: Partial<TableType<T>> = {};
+
+    const primaryKey =
+        'primKey' in table.schema ? table.schema.primKey.keyPath : table.schema.primaryKey.keyPath;
+
+    if (rule === cryptoOptions.NON_INDEXED_FIELDS) {
+        for (const key in entity) {
+            if (key === primaryKey || indices.includes(key)) {
+                dataToStore[key] = entity[key];
+            } else {
+                toEncrypt[key] = entity[key];
+            }
+        }
+    } else if (rule.type === cryptoOptions.ENCRYPT_LIST) {
+        for (const key in entity) {
+            if (key !== primaryKey && rule.fields.includes(key)) {
+                toEncrypt[key] = entity[key];
+            } else {
+                dataToStore[key] = entity[key];
+            }
+        }
+    } else {
+        const whitelist = rule.type === cryptoOptions.UNENCRYPTED_LIST ? rule.fields : [];
+        for (const key in entity) {
+            if (
+                key !== primaryKey &&
+                // @ts-ignore
+                entity.hasOwnProperty(key) &&
+                indices.includes(key) === false &&
+                whitelist.includes(key) === false
+            ) {
+                toEncrypt[key] = entity[key];
+            } else {
+                dataToStore[key] = entity[key];
+            }
+        }
+    }
+
+    // @ts-ignore
+    dataToStore.__encryptedData = performEncryption(encryptionKey, entity, nonceOverride);
+    return dataToStore;
+}
+
+export function decryptEntity<T extends Dexie.Table>(
+    entity: TableType<T> | undefined,
+    rule: EncryptionOption<T> | undefined,
+    encryptionKey: Uint8Array,
+    performDecryption: DecryptionMethod
+) {
+    if (rule === undefined || entity === undefined || !entity.__encryptedData) {
+        return entity;
+    }
+
+    const { __encryptedData, ...unencryptedFields } = entity;
+
+    const decrypted = performDecryption(encryptionKey, __encryptedData);
+
+    return {
+        ...unencryptedFields,
+        ...decrypted,
+    } as TableType<T>;
+}
 
 export function installHooks<T extends Dexie>(
     db: T,
     encryptionOptions: CryptoSettings<T>,
     keyPromise: Promise<Uint8Array>,
+    performEncryption: EncryptionMethod,
+    performDecryption: DecryptionMethod,
     nonceOverride: Uint8Array | undefined
 ) {
     // this promise has to be resolved in order for the database to be open
@@ -38,12 +125,18 @@ export function installHooks<T extends Dexie>(
                             data,
                             encryptionSetting,
                             encryptionKey,
+                            performEncryption,
                             nonceOverride
                         );
                     }
 
                     function decrypt(data: any) {
-                        return decryptEntity(data, encryptionSetting, encryptionKey);
+                        return decryptEntity(
+                            data,
+                            encryptionSetting,
+                            encryptionKey,
+                            performDecryption
+                        );
                     }
 
                     return {

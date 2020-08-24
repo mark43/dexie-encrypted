@@ -495,7 +495,7 @@ describe('Encrypting', () => {
         `);
     });
 
-    it('should work with anyOf', async () => {
+    it('should work with bulkGet', async () => {
         const db = new Dexie('anyof');
         encryptDatabase(
             db,
