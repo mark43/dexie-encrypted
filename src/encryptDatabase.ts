@@ -28,7 +28,7 @@ export function encryptDatabaseWithCustomEncryption<T extends Dexie>({
     onKeyChange,
     encrypt,
     decrypt,
-    nonceOverrideForTesting,
+    _nonceOverrideForTesting,
 }: EncryptDatabaseParams<T>) {
     let keyPromise: Promise<Uint8Array>;
     if (encryptionKey instanceof Uint8Array) {
@@ -64,7 +64,7 @@ export function encryptDatabaseWithCustomEncryption<T extends Dexie>({
             );
         }
     }
-    installHooks(db, tableSettings, keyPromise, encrypt, decrypt, nonceOverrideForTesting);
+    installHooks(db, tableSettings, keyPromise, encrypt, decrypt, _nonceOverrideForTesting);
 
     db.on('ready', async () => {
         try {
@@ -87,7 +87,7 @@ export function encryptDatabaseWithCustomEncryption<T extends Dexie>({
 
             await checkForKeyChange(db, oldSettings, encryptionKey, encrypt, decrypt, onKeyChange);
 
-            await upgradeTables(db, tableSettings, encryptionKey, oldSettings?.settings, encrypt, decrypt, nonceOverrideForTesting);
+            await upgradeTables(db, tableSettings, encryptionKey, oldSettings?.settings, encrypt, decrypt, _nonceOverrideForTesting);
             await encryptionSettings.clear();
             await encryptionSettings.put({
                 settings: tableSettings,
@@ -102,4 +102,30 @@ export function encryptDatabaseWithCustomEncryption<T extends Dexie>({
             return Dexie.Promise.reject(e);
         }
     });
+}
+
+export function clearAllTables(db: Dexie) {
+    return Promise.all(
+        db.tables.map(function(table) {
+            return table.clear();
+        })
+    );
+}
+
+export async function clearEncryptedTables<T extends Dexie>(db: T) {
+    let encryptionSettings = (await db
+        .table('_encryptionSettings')
+        .toCollection()
+        .last()
+        .catch(() => {
+            throw new Error(
+                "Dexie-encrypted can't find its encryption table. You may need to bump your database version."
+            );
+        })) as CryptoSettingsTableType<T>;
+
+    const promises = Object.keys(encryptionSettings.settings).map(async function(key) {
+        await db.table(key).clear();
+    });
+
+    return Promise.all(promises);
 }

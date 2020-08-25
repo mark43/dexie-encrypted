@@ -50,5 +50,5 @@ export interface EncryptDatabaseParams<T extends Dexie> {
     onKeyChange: (db: T) => Promise<any>;
     encrypt: EncryptionMethod;
     decrypt: DecryptionMethod;
-    nonceOverrideForTesting?: Uint8Array;
+    _nonceOverrideForTesting?: Uint8Array;
 }
