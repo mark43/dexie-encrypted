@@ -1,6 +1,6 @@
 {
     "name": "dexie-encrypted",
-    "version": "2.0.0-beta.0",
+    "version": "2.0.0-beta.1",
     "description": "Encryption middleware for Dexie",
     "main": "dist",
     "license": "MIT",
