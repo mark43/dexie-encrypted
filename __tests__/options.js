@@ -6,7 +6,7 @@ require('dexie-export-import');
 const nacl = require('tweetnacl');
 
 const {
-    encryptDatabase,
+    applyEncryptionMiddleware,
     clearAllTables,
     clearEncryptedTables,
     cryptoOptions,
@@ -17,7 +17,7 @@ const keyPair = nacl.sign.keyPair.fromSeed(new Uint8Array(32));
 describe('Options', () => {
     it('should not encrypt unencrypted list', async () => {
         const db = new Dexie('unencrypted list');
-        encryptDatabase(
+        applyEncryptionMiddleware(
             db,
             keyPair.publicKey,
             {
@@ -47,7 +47,7 @@ describe('Options', () => {
         await db.friends.add(original);
 
         const decryptingDb = new Dexie('unencrypted list');
-        encryptDatabase(
+        applyEncryptionMiddleware(
             decryptingDb,
             keyPair.publicKey,
             {
@@ -216,7 +216,7 @@ describe('Options', () => {
 
     it('should encrypt encrypt list', async () => {
         const db = new Dexie('encrypt-list');
-        encryptDatabase(
+        applyEncryptionMiddleware(
             db,
             keyPair.publicKey,
             {
@@ -246,7 +246,7 @@ describe('Options', () => {
         await db.friends.add(original);
 
         const decryptingDb = new Dexie('encrypt-list');
-        encryptDatabase(
+        applyEncryptionMiddleware(
             decryptingDb,
             keyPair.publicKey,
             {
@@ -415,7 +415,7 @@ describe('Options', () => {
 
     it('should encrypt non-indexed fields', async done => {
         const db = new Dexie('non-indexed-fields');
-        encryptDatabase(
+        applyEncryptionMiddleware(
             db,
             keyPair.publicKey,
             {
@@ -442,7 +442,7 @@ describe('Options', () => {
         await db.friends.add(original);
 
         const decryptingDb = new Dexie('non-indexed-fields');
-        encryptDatabase(
+        applyEncryptionMiddleware(
             decryptingDb,
             keyPair.publicKey,
             {
@@ -621,7 +621,7 @@ describe('Options', () => {
         const db = new Dexie('async-key');
 
         const keyPromise = Promise.resolve(keyPair.publicKey);
-        encryptDatabase(
+        applyEncryptionMiddleware(
             db,
             keyPromise,
             {
@@ -651,7 +651,7 @@ describe('Options', () => {
         readingDb.version(1).stores({
             friends: '++id, name, age',
         });
-        encryptDatabase(
+        applyEncryptionMiddleware(
             readingDb,
             keyPromise,
             {
@@ -675,7 +675,7 @@ describe('Options', () => {
         key.set([1, 2, 3], 0);
         key2.set([1, 2, 3], 1);
 
-        encryptDatabase(
+        applyEncryptionMiddleware(
             db,
             key,
             {
@@ -705,7 +705,7 @@ describe('Options', () => {
 
         expect(await db.friends.get(1)).not.toEqual(undefined);
 
-        encryptDatabase(
+        applyEncryptionMiddleware(
             db2,
             key2,
             {

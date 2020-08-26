@@ -21,7 +21,7 @@ function overrideParseStoresSpec(origFunc: any) {
 }
 
 
-export function encryptDatabaseWithCustomEncryption<T extends Dexie>({
+export function applyMiddlewareWithCustomEncryption<T extends Dexie>({
     db,
     encryptionKey,
     tableSettings,

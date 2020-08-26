@@ -5,7 +5,7 @@ const Dexie = require('dexie');
 const nacl = require('tweetnacl');
 
 const {
-    encryptDatabase,
+    applyEncryptionMiddleware,
     clearAllTables,
     clearEncryptedTables,
     cryptoOptions,
@@ -24,7 +24,7 @@ describe('Error messaging', () => {
         await db.close();
 
         const db2 = new Dexie('no-crypt-check');
-        encryptDatabase(
+        applyEncryptionMiddleware(
             db2,
             keyPair.publicKey,
             {
@@ -50,7 +50,7 @@ describe('Error messaging', () => {
     it('should have helpful error messages if your key is a regular array', () => {
         const db = new Dexie('key-check');
         expect(() =>
-            encryptDatabase(
+            applyEncryptionMiddleware(
                 db,
                 [1, 2, 3],
                 {
@@ -65,7 +65,7 @@ describe('Error messaging', () => {
     it('should have helpful error messages if your key is a Uint8Array of the wrong length', async () => {
         const db = new Dexie('key-check');
         expect(() => {
-            encryptDatabase(
+            applyEncryptionMiddleware(
                 db,
                 new Uint8Array(31),
                 {
@@ -82,7 +82,7 @@ describe('Error messaging', () => {
         db.version(1).stores({
             friends: '++id, name, age',
         });
-        encryptDatabase(
+        applyEncryptionMiddleware(
             db,
             Promise.resolve(new Uint8Array(31)),
             {
@@ -103,7 +103,7 @@ describe('Error messaging', () => {
     it('should have helpful error messages if your key is a Uint16Array', async () => {
         const db = new Dexie('key-check');
         expect(() =>
-            encryptDatabase(
+            applyEncryptionMiddleware(
                 db,
                 new Uint16Array(32),
                 {

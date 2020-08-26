@@ -6,7 +6,7 @@ require('dexie-export-import');
 const nacl = require('tweetnacl');
 
 const {
-    encryptDatabase,
+    applyEncryptionMiddleware,
     clearAllTables,
     clearEncryptedTables,
     cryptoOptions,
@@ -16,7 +16,7 @@ const keyPair = nacl.sign.keyPair.fromSeed(new Uint8Array(32));
 describe('Upgrades', () => {
     it('should upgrade', async () => {
         const db = new Dexie('upgrade-db');
-        encryptDatabase(
+        applyEncryptionMiddleware(
             db,
             keyPair.publicKey,
             {
@@ -48,7 +48,7 @@ describe('Upgrades', () => {
         await db.close();
 
         const upgraded = new Dexie('upgrade-db');
-        encryptDatabase(
+        applyEncryptionMiddleware(
             upgraded,
             keyPair.publicKey,
             {
@@ -71,7 +71,7 @@ describe('Upgrades', () => {
         readingDb.version(1).stores({
             friends: '++id, name, age',
         });
-        encryptDatabase(
+        applyEncryptionMiddleware(
             readingDb,
             keyPair.publicKey,
             {

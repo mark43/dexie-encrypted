@@ -6,7 +6,7 @@ require('dexie-export-import');
 const nacl = require('tweetnacl');
 
 const {
-    encryptDatabase,
+    applyEncryptionMiddleware,
     clearAllTables,
     clearEncryptedTables,
     cryptoOptions,
@@ -28,7 +28,7 @@ const dbToJson = db => {
 
 describe('API', () => {
     it('should be a function', () => {
-        expect(typeof encryptDatabase).toBe('function');
+        expect(typeof applyEncryptionMiddleware).toBe('function');
     });
     it('should have cleanup functions that are functions', () => {
         expect(typeof clearAllTables).toBe('function');
@@ -45,7 +45,7 @@ describe('API', () => {
 describe('Encrypting', () => {
     it('should encrypt data', async () => {
         const db = new Dexie('MyDatabase');
-        encryptDatabase(
+        applyEncryptionMiddleware(
             db,
             keyPair.publicKey,
             {
@@ -74,7 +74,7 @@ describe('Encrypting', () => {
         readingDb.version(1).stores({
             friends: '++id, name, age',
         });
-        encryptDatabase(
+        applyEncryptionMiddleware(
             readingDb,
             keyPair.publicKey,
             {
@@ -90,7 +90,7 @@ describe('Encrypting', () => {
 
     it('should decrypt', async done => {
         const db = new Dexie('decrypt-test');
-        encryptDatabase(
+        applyEncryptionMiddleware(
             db,
             keyPair.publicKey,
             {
@@ -124,7 +124,7 @@ describe('Encrypting', () => {
 
     it('should decrypt when the database is closed and reopened', async done => {
         const db = new Dexie('decrypt-test-2');
-        encryptDatabase(
+        applyEncryptionMiddleware(
             db,
             keyPair.publicKey,
             {
@@ -151,7 +151,7 @@ describe('Encrypting', () => {
         await db.friends.add({ ...original });
 
         const db2 = new Dexie('decrypt-test-2');
-        encryptDatabase(
+        applyEncryptionMiddleware(
             db2,
             keyPair.publicKey,
             {
@@ -175,7 +175,7 @@ describe('Encrypting', () => {
 
     it('should not modify your object', async done => {
         const db = new Dexie('MyDatabase');
-        encryptDatabase(
+        applyEncryptionMiddleware(
             db,
             keyPair.publicKey,
             {
@@ -210,7 +210,7 @@ describe('Encrypting', () => {
     it('should not explode if you get something undefined', async done => {
         const db = new Dexie('explode-undefined');
 
-        encryptDatabase(
+        applyEncryptionMiddleware(
             db,
             keyPair.publicKey,
             {
@@ -231,7 +231,7 @@ describe('Encrypting', () => {
 
     it('should still work when you update an existing entity', async () => {
         const db = new Dexie('in-and-out-test');
-        encryptDatabase(
+        applyEncryptionMiddleware(
             db,
             keyPair.publicKey,
             {
@@ -280,7 +280,7 @@ describe('Encrypting', () => {
 
     it('should still work when you update a child object', async () => {
         const db = new Dexie('in-and-out-test');
-        encryptDatabase(
+        applyEncryptionMiddleware(
             db,
             keyPair.publicKey,
             {
@@ -331,7 +331,7 @@ describe('Encrypting', () => {
 
     it('should still work when you have a key with dots in it', async () => {
         const db = new Dexie('dots-test');
-        encryptDatabase(
+        applyEncryptionMiddleware(
             db,
             keyPair.publicKey,
             {
@@ -382,7 +382,7 @@ describe('Encrypting', () => {
 
     it('should work with queries', async () => {
         const db = new Dexie('queries');
-        encryptDatabase(
+        applyEncryptionMiddleware(
             db,
             keyPair.publicKey,
             {
@@ -436,7 +436,7 @@ describe('Encrypting', () => {
 
     it('should work with anyOf', async () => {
         const db = new Dexie('anyof');
-        encryptDatabase(
+        applyEncryptionMiddleware(
             db,
             keyPair.publicKey,
             {
@@ -497,7 +497,7 @@ describe('Encrypting', () => {
 
     it('should work with bulkGet', async () => {
         const db = new Dexie('anyof');
-        encryptDatabase(
+        applyEncryptionMiddleware(
             db,
             keyPair.publicKey,
             {
