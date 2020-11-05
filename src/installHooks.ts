@@ -79,7 +79,20 @@ export function decryptEntity<T extends Dexie.Table>(
 
     const { __encryptedData, ...unencryptedFields } = entity;
 
-    const decrypted = performDecryption(encryptionKey, __encryptedData);
+    let decrypted = performDecryption(encryptionKey, __encryptedData);
+
+    // There is a bug that causes double encryption. I am not sure what causes it,
+    // it is very rare and I have no repro steps. I believe the hook is running twice
+    // in very rare circumstances, but I have no evidence of it.
+    // This decrypts until all decryption is done. The only circumstance where it will
+    // create an undesireable result is if your data has an __encryptedData key, and
+    // that data can be decrypted by the performDecryption function.
+    while (decrypted.__encryptedData) {
+        const decryptionAttempt = performDecryption(encryptionKey, decrypted.__encryptedData);
+        if (decryptionAttempt) {
+            decrypted = decryptionAttempt;
+        }
+    }
 
     return {
         ...unencryptedFields,
