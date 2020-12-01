@@ -156,25 +156,10 @@ export function installHooks<T extends Dexie>(
                         ...table,
                         openCursor(req) {
                             return table.openCursor(req).then(cursor => {
-                                if (!cursor) {
+                                if (!cursor || !req.values) {
                                     return cursor;
                                 }
                                 return Object.create(cursor, {
-                                    continue: {
-                                        get() {
-                                            return cursor.continue;
-                                        },
-                                    },
-                                    continuePrimaryKey: {
-                                        get() {
-                                            return cursor.continuePrimaryKey;
-                                        },
-                                    },
-                                    key: {
-                                        get() {
-                                            return cursor.key;
-                                        },
-                                    },
                                     value: {
                                         get() {
                                             return decrypt(cursor.value);
@@ -193,10 +178,12 @@ export function installHooks<T extends Dexie>(
                         },
                         query(req) {
                             return table.query(req).then(res => {
-                                return Dexie.Promise.all(res.result.map(decrypt)).then(result => ({
+                                return req.values // db.friends.primaryKeys() will provide {values: false}
+                                ? Dexie.Promise.all(res.result.map(decrypt)).then(result => ({
                                     ...res,
                                     result,
-                                }));
+                                }))
+                                : res;
                             });
                         },
                         mutate(req) {
